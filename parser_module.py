@@ -23,14 +23,8 @@ class Parse:
         return text_tokens_without_stopwords
 
     def split_url(self,url):
-        #TODO: WWW SPLIT
-        parsedUrl = parse_url(url)
-        val_list = [parsedUrl[0], parsedUrl[2]]
-        if parsedUrl[4] != None:
-            val_list += parsedUrl[4].split('/')[1:]
-        if parsedUrl[5] != None:
-            val_list += parsedUrl[5].split('=')
-        return val_list
+        url_list = list(filter(None,re.split("://|\?|/|=|(?<=www.)",url)))
+        return url_list
 
     def url_parser(self,url):
         """
@@ -70,6 +64,8 @@ class Parse:
         retweet_quote_indices = doc_as_list[13]
 
         x =  self.hashtag_parser("#ASAP_PartyAtHome")
+
+        self.url_parser(url)
 
         term_dict = {}
         tokenized_text = self.parse_sentence(full_text)
