@@ -3,8 +3,6 @@ import re
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from document import Document
-from urllib3.util import parse_url
-
 
 class Parse:
 
@@ -18,6 +16,8 @@ class Parse:
         :return:
         """
         # TODO: Percents, Numbers, Names and Entity's
+        text = self.remove_percent(text)
+        text = self.num_manipulation(text)
         text_tokens = word_tokenize(text)
         text_tokens_without_stopwords = [w.lower() for w in text_tokens if w not in self.stop_words]
         return text_tokens_without_stopwords
@@ -26,14 +26,32 @@ class Parse:
         url_list = list(filter(None,re.split("://|\?|/|=|(?<=www).",url)))
         return url_list
 
+    def remove_percent(self,text):
+        return re.sub('(?<=\d) *percentage|(?<=\d) *percent',"%",text)
+
+    def num_manipulation(num):
+        #TODO: Add to DOH 2020(year example) and remove 0(round) 1000M to 1B?!
+        num = re.sub(r'(?<=\d|.) *Billion|(?<=\d|.) *billion', "B", num)
+        num = re.sub(r'(?<=\d|.) *Million|(?<=\d|.) *million', "M", num)
+        num = re.sub(r'(?<=\d|.) *Thousand|(?<=\d|.) *thousand', "K", num)
+        num = re.sub(r'([0-9]+)(,{0,1})([0-9]{3})(,{0,1})([0-9]{3})(,{0,1})([0-9]{3})', r'\1.\3B', num)
+        num = re.sub(r'([0-9]+)(,{0,1})([0-9]{3})(,{0,1})([0-9]{3}).*([0-9]*)', r'\1.\3M', num)
+        num = re.sub(r'([0-9]+)(,{0,1})([0-9]{3})($|(.[0-9]*)$)', r'\1.\3K', num)
+        num = re.sub(r'([0-9]+).([0]*)([1-9]{0,3})([0]*)(K|M|B)', r'\1.\2\3\5', num)
+        return re.sub(r'([0-9]{1,3}).([0]{3})(K|M|B)', r'\1\3', num)
+
     def url_parser(self,url):
         """
         :param url: recieves a string based dictionary of all urls
         :return: dictionary with parsed urls
         """
-        url_dict = eval(url)  # maybe call eval in pars_doc ?
+        try:
+            url_dict = eval(url)  # maybe call eval in pars_doc ?
+        except:
+            url_dict = eval(re.sub(r'null','""',url))
+
         return_dict = {}
-        for key,val in url_dict.items():
+        for key, val in url_dict.items():
             return_dict[key] = self.split_url(key)
             return_dict[val] = self.split_url(val)
         return return_dict
