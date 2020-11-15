@@ -23,7 +23,7 @@ class Parse:
         return text_tokens_without_stopwords
 
     def split_url(self,url):
-        url_list = list(filter(None,re.split("://|\?|/|=|(?<=www.)",url)))
+        url_list = list(filter(None,re.split("://|\?|/|=|(?<=www).",url)))
         return url_list
 
     def url_parser(self,url):
