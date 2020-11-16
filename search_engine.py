@@ -33,10 +33,11 @@ def run_engine():
         for parsed_doc in tqdm(_p.imap_unordered(p.parse_doc, documents_list), total=len(documents_list),
                                desc="Parsing 1st Parquet"):
             number_of_documents += 1
-            # indexer.add_new_doc(parsed_doc)
+            indexer.add_new_doc(parsed_doc)
         _p.close()
         _p.join()
     print("--- Parallel Parser took %s seconds ---" % (time.time() - start_time))
+
     # start_time = time.time()
     # for idx, document in enumerate(documents_list):
     #     # parse the document

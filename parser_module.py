@@ -1,13 +1,19 @@
 import re
 from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
 from document import Document
 
+# TODO: stemmer
+# TODO: capital letters
+# TODO: entities detector
+# TODO: unicode 126
 
 class Parse:
 
     def __init__(self):
-        self.stop_words = stopwords.words('english')
+        self.stop_words = stopwords.words(
+            'english')  # TODO:remove RT, http, https, www etc. (we will see after inv-index
+        self.nonstopwords = 0
+        self.max_tf = 0
 
     def parse_sentence(self, text):
         """
@@ -15,12 +21,20 @@ class Parse:
         :param text:
         :return:
         """
-        # TODO: Percents, Numbers, Names and Entity's
-        text = self.remove_percent(text)
-        text = self.num_manipulation(text)
-        text_tokens = word_tokenize(text)
-        text_tokens_without_stopwords = [w.lower() for w in text_tokens if w not in self.stop_words]
-        return text_tokens_without_stopwords
+        term_dict = {}
+        # text_tokens = word_tokenize(text) #TODO: is RE Faster? add to doh
+        text_tokens = re.findall("[A-Z]{2,}(?![a-z])|[A-Z][a-z]+(?=[A-Z])|@[\'\w\-]+|#[\'\w\-]+|[\'\w\-]+", text)  #TODO: add digits and etc. - currently missing from doc
+        indices_counter = 0
+        for term in text_tokens:
+            indices_counter += 1
+            if term[0] == "#":
+                hashtag_list = self.hashtag_parser(term)
+                for mini_term in hashtag_list:
+                    self.dictAppender(term_dict, indices_counter, mini_term)
+            elif term[0] == "@" or term.lower() not in self.stop_words:
+                self.dictAppender(term_dict, indices_counter, term)
+
+        return term_dict, indices_counter
 
     def split_url(self, url):
         url_list = list(filter(None, re.split("://|\?|/|=|(?<=www).", url)))
@@ -45,21 +59,27 @@ class Parse:
         :param url: recieves a string based dictionary of all urls
         :return: dictionary with parsed urls
         """
-        try:
-            url_dict = eval(url)  # maybe call eval in pars_doc ?
-        except:
-            url_dict = eval(re.sub(r'null', '""', url))
+        try: url_dict = eval(url)  # convert string to dictionary
+        except: url_dict = eval(re.sub(r'null', '""', url))
 
-        return_dict = {}
-        for key, val in url_dict.items():
-            return_dict[key] = self.split_url(key)
-            return_dict[val] = self.split_url(val)
-        return return_dict
+        finalList = []
+        for val in url_dict.values():
+            # TODO: key url is not needed - add to doh
+            finalList += self.split_url(val)
+        return finalList
 
     def hashtag_parser(self, hashtag):
         splitted_hashtag = map(lambda x: x.lower(),
                                filter(lambda x: len(x) > 0, re.split(r'_|(?<=[^A-Z])(?=[A-Z])', hashtag)))
         return list(splitted_hashtag)[1:] + [hashtag.lower()]
+
+    def dictAppender(self, d, counter, term):
+        self.nonstopwords += 1
+        tmp_lst = d.get(term, [])
+        tmp_lst.append(counter)
+        d[term] = tmp_lst
+        if self.max_tf < len(tmp_lst):
+            self.max_tf = len(tmp_lst)
 
     def parse_doc(self, doc_as_list):
         """doc_as_list[3]
@@ -71,32 +91,34 @@ class Parse:
         tweet_date = doc_as_list[1]
         full_text = doc_as_list[2]
         url = doc_as_list[3]
-        indices = doc_as_list[4]
+        # indices = doc_as_list[4]
         retweet_text = doc_as_list[5]
         retweet_url = doc_as_list[6]
-        retweet_indices = doc_as_list[7]
+        # retweet_indices = doc_as_list[7]
         quote_text = doc_as_list[8]
         quote_url = doc_as_list[9]
-        quote_indices = doc_as_list[10]
-        retweet_quote_text = doc_as_list[11]
-        retweet_quote_url = doc_as_list[12]
-        retweet_quote_indices = doc_as_list[13]
+        # quote_indices = doc_as_list[10]
+        # retweet_quote_text = doc_as_list[11]
+        # retweet_quote_url = doc_as_list[12]
+        # retweet_quote_indices = doc_as_list[13]
 
-        x = self.hashtag_parser("#ASAP_PartyAtHome")
+        self.nonstopwords = 0
+        self.max_tf =0
+        docText = full_text
+        if quote_text:
+            docText += quote_text
+        docText = self.num_manipulation(docText)  # TODO: CHECK IF OK
+        docText = self.remove_percent(docText)
 
-        self.url_parser(url)
+        tokenized_dict, indices_counter = self.parse_sentence(docText)
 
-        term_dict = {}
-        tokenized_text = self.parse_sentence(full_text)
+        urlTermList = self.url_parser(url)  # TODO maybe add another url
+        for term in urlTermList:
+            indices_counter += 1
+            self.dictAppender(tokenized_dict, indices_counter, term)
 
-        doc_length = len(tokenized_text)  # after text operations.
-
-        for term in tokenized_text:
-            if term not in term_dict.keys():
-                term_dict[term] = 1
-            else:
-                term_dict[term] += 1
+        doc_length = self.nonstopwords  # after text operations.
 
         document = Document(tweet_id, tweet_date, full_text, url, retweet_text, retweet_url, quote_text,
-                            quote_url, term_dict, doc_length)
+                            quote_url, tokenized_dict, doc_length, self.max_tf)
         return document
