@@ -1,8 +1,9 @@
-
 class Document:
 
-    def __init__(self, tweet_id, tweet_date=None, full_text=None, url=None, retweet_text=None, retweet_url=None,indices=None,retweet_indices=None,quote_indices = None,
-                 quote_text=None,retweet_quoted_text=None,retweet_quoted_urls=None,retweet_quoted_indices=None, quote_url=None, term_doc_dictionary=None, doc_length=0):
+    def __init__(self, tweet_id, tweet_date=None, full_text=None, url=None, retweet_text=None, retweet_url=None,
+                 quote_text=None, quote_url=None, term_doc_dictionary=None, doc_length=0, indices=None,
+                 retweet_indices=None, quote_indices=None, retweet_quoted_text=None, retweet_quoted_urls=None,
+                 retweet_quoted_indices=None):
         """
         :param tweet_id: tweet id
         :param tweet_date: tweet date

@@ -4,6 +4,12 @@ from parser_module import Parse
 from indexer import Indexer
 from searcher import Searcher
 import utils
+import time
+from multiprocessing.pool import Pool
+from multiprocessing import cpu_count
+from tqdm import tqdm
+
+CPUCOUNT = cpu_count()
 
 
 def run_engine():
@@ -11,6 +17,7 @@ def run_engine():
 
     :return:
     """
+
     number_of_documents = 0
 
     config = ConfigClass()
@@ -19,15 +26,25 @@ def run_engine():
     indexer = Indexer(config)
 
     documents_list = r.read_file(file_name='covid19_07-13.snappy.parquet')
-    #more_urls = list(filter(lambda x: str(x[4]).count("[") > 2,documents_list))
+    # more_urls = list(filter(lambda x: str(x[4]).count("[") > 2,documents_list))
     # Iterate over every document in the file
-
-    for idx, document in enumerate(documents_list):
-        # parse the document
-        parsed_document = p.parse_doc(document)
-        number_of_documents += 1
-        # index the document data
-        #indexer.add_new_doc(parsed_document)
+    start_time = time.time()
+    with Pool(CPUCOUNT) as _p:
+        for parsed_doc in tqdm(_p.imap_unordered(p.parse_doc, documents_list), total=len(documents_list),
+                               desc="Parsing 1st Parquet"):
+            number_of_documents += 1
+            # indexer.add_new_doc(parsed_doc)
+        _p.close()
+        _p.join()
+    print("--- Parallel Parser took %s seconds ---" % (time.time() - start_time))
+    # start_time = time.time()
+    # for idx, document in enumerate(documents_list):
+    #     # parse the document
+    #     parsed_document = p.parse_doc(document)
+    #     number_of_documents += 1
+    #     # index the document data
+    #     #indexer.add_new_doc(parsed_document)
+    # print("--- UnParallel Parser took %s seconds ---" % (time.time() - start_time))
     print('Finished parsing and indexing. Starting to export files')
 
     utils.save_obj(indexer.inverted_idx, "inverted_idx")
