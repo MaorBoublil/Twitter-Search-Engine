@@ -3,7 +3,7 @@ from configuration import ConfigClass
 from parser_module import Parse
 from indexer import Indexer
 from searcher import Searcher
-import utils
+from utils import save_obj,load_obj
 import time
 from multiprocessing.pool import Pool
 from multiprocessing import cpu_count
@@ -47,13 +47,13 @@ def run_engine():
     # print("--- UnParallel Parser took %s seconds ---" % (time.time() - start_time))
     print('Finished parsing and indexing. Starting to export files')
 
-    utils.save_obj(indexer.inverted_idx, "inverted_idx")
-    utils.save_obj(indexer.postingDict, "posting")
+    save_obj(indexer.inverted_idx, "inverted_idx")
+    save_obj(indexer.postingDict, "posting")
 
 
 def load_index():
     print('Load inverted index')
-    inverted_index = utils.load_obj("inverted_idx")
+    inverted_index = load_obj("inverted_idx")
     return inverted_index
 
 

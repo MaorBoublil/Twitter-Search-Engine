@@ -30,7 +30,7 @@ class Parse:
         return re.sub('(?<=\d) *percentage|(?<=\d) *percent', "%", text)
 
     def num_manipulation(self, num):
-        # TODO: Add to DOH 2020(year example) and remove 0(round) 1000M to 1B?!
+        # TODO: Add to DOH 2020(year example), 1000M to 1B?!
         num = re.sub(r'(?<=\d|.) *Billion|(?<=\d|.) *billion', "B", num)
         num = re.sub(r'(?<=\d|.) *Million|(?<=\d|.) *million', "M", num)
         num = re.sub(r'(?<=\d|.) *Thousand|(?<=\d|.) *thousand', "K", num)
