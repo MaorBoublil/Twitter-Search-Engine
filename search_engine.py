@@ -1,3 +1,5 @@
+import glob
+
 from reader import ReadFile
 from configuration import ConfigClass
 from parser_module import Parse
@@ -6,11 +8,22 @@ from searcher import Searcher
 from utils import save_obj,load_obj
 import time
 from multiprocessing.pool import Pool
-from multiprocessing import cpu_count
+from multiprocessing import cpu_count,Lock
 from tqdm import tqdm
+import os
 
 CPUCOUNT = cpu_count()
 
+def readnParse(p,documents_list,number_of_documents,index,indexer):
+    lock = Lock()
+    with Pool(5) as _p:
+        for parsed_doc in tqdm(_p.imap_unordered(p.parse_doc, documents_list), total=len(documents_list),
+                               desc="Parsing Parquet #" + str(index)):
+            number_of_documents += 1
+            #indexer.add_new_doc(parsed_doc)
+        _p.close()
+        _p.join()
+    return number_of_documents
 
 def run_engine():
     """
@@ -25,29 +38,22 @@ def run_engine():
     p = Parse()
     indexer = Indexer(config)
 
-    documents_list = r.read_file(file_name='covid19_07-13.snappy.parquet')
-    # more_urls = list(filter(lambda x: str(x[4]).count("[") > 2,documents_list))
-    # Iterate over every document in the file
+    y = list(glob.iglob(os.getcwd()+"/Data/" + '**/**.parquet', recursive=True))
+    x = [x.split("Engine/")[1] for x in list(glob.iglob(os.getcwd()+"/Data/" + '**/**.parquet', recursive=True))]
     start_time = time.time()
-    with Pool(CPUCOUNT) as _p:
-        for parsed_doc in tqdm(_p.imap_unordered(p.parse_doc, documents_list), total=len(documents_list),
-                               desc="Parsing 1st Parquet"):
-            number_of_documents += 1
-            indexer.add_new_doc(parsed_doc)
-        _p.close()
-        _p.join()
+    #number_of_documents = readnParse(r,p,x,number_of_documents)
+    for index in range(21,22):
+        #if index == 21:#TODO: WHAT THE HELL 21 Y U STUCk
+        #    continue
+        documents_list = r.read_file(file_name=x[index])
+        number_of_documents+=readnParse(p,documents_list,number_of_documents,index,indexer)
+        # more_urls = list(filter(lambda x: str(x[4]).count("[") > 2,documents_list))
+        # Iterate over every document in the file
+
     print("--- Parallel Parser took %s seconds ---" % (time.time() - start_time))
+    indexer.finish_index()
 
-    # start_time = time.time()
-    # for idx, document in enumerate(documents_list):
-    #     # parse the document
-    #     parsed_document = p.parse_doc(document)
-    #     number_of_documents += 1
-    #     # index the document data
-    #     #indexer.add_new_doc(parsed_document)
-    # print("--- UnParallel Parser took %s seconds ---" % (time.time() - start_time))
     print('Finished parsing and indexing. Starting to export files')
-
     save_obj(indexer.inverted_idx, "inverted_idx")
     save_obj(indexer.postingDict, "posting")
 

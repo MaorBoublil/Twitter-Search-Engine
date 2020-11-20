@@ -5,13 +5,13 @@ from document import Document
 # TODO: stemmer
 # TODO: capital letters
 # TODO: entities detector
-# TODO: unicode 126
 
 class Parse:
 
     def __init__(self):
-        self.stop_words = stopwords.words(
-            'english')  # TODO:remove RT, http, https, www etc. (we will see after inv-index
+        self.stop_words = stopwords.words('english')
+        self.stop_words+= ["rt", "http", "https", "www","twitter.com"]# TODO:remove domain stiop words. we will see after inv-index
+        #self.stop_words = {x:None for x in self.stop_words}
         self.nonstopwords = 0
         self.max_tf = 0
 
@@ -23,7 +23,7 @@ class Parse:
         """
         term_dict = {}
         # text_tokens = word_tokenize(text) #TODO: is RE Faster? add to doh
-        text_tokens = re.findall("[A-Z]{2,}(?![a-z])|[A-Z][a-z]+(?=[A-Z])|@[\'\w\-]+|#[\'\w\-]+|[\'\w\-]+", text)  #TODO: add digits and etc. - currently missing from doc
+        text_tokens = re.findall("[\w']+-[\w]+|@*#*[\w']+", text)
         indices_counter = 0
         for term in text_tokens:
             indices_counter += 1
@@ -31,8 +31,7 @@ class Parse:
                 hashtag_list = self.hashtag_parser(term)
                 for mini_term in hashtag_list:
                     self.dictAppender(term_dict, indices_counter, mini_term)
-            elif term[0] == "@" or term.lower() not in self.stop_words:
-                self.dictAppender(term_dict, indices_counter, term)
+            self.dictAppender(term_dict, indices_counter, term)
 
         return term_dict, indices_counter
 
@@ -74,6 +73,7 @@ class Parse:
         return list(splitted_hashtag)[1:] + [hashtag.lower()]
 
     def dictAppender(self, d, counter, term):
+        if term.lower() in self.stop_words: return
         self.nonstopwords += 1
         tmp_lst = d.get(term, [])
         tmp_lst.append(counter)
@@ -88,6 +88,9 @@ class Parse:
         :return: Document object with corresponding fields.
         """
         tweet_id = doc_as_list[0]
+        problem = ["1290519566116773888","1290519944958885889","1290520085958991873","1290520273180008448","1290520284227874816","1290520323914268672","1290520485793599489","1290520554236260354"]
+        if tweet_id in problem:
+            print(1)
         tweet_date = doc_as_list[1]
         full_text = doc_as_list[2]
         url = doc_as_list[3]
@@ -107,6 +110,9 @@ class Parse:
         docText = full_text
         if quote_text:
             docText += quote_text
+
+        #link removal
+        docText = re.sub(r'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))', '', docText)
         docText = self.num_manipulation(docText)  # TODO: CHECK IF OK
         docText = self.remove_percent(docText)
 

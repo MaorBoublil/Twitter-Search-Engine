@@ -12,3 +12,10 @@ class Stemmer:
         :return: stemmed token
         """
         return self.stemmer.stem(token)
+
+
+if __name__ == '__main__':
+    words = ["NBA", "Cities", "CITIES"]
+    stemmer = Stemmer()
+    for word in words:
+        print(stemmer.stem_term(word))
