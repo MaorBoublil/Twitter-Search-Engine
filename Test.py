@@ -5,5 +5,5 @@ import gzip
 from urllib3.util import parse_url
 dct = {1:2}
 
-with gzip.open("PostingFiles/"+"1", 'wb') as _pickle:
-    pickle.dump(dct, _pickle, -1)
+if 1 in dct:
+    print(1)

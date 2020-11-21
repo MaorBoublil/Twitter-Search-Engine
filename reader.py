@@ -6,7 +6,7 @@ class ReadFile:
     def __init__(self, corpus_path):
         self.corpus_path = corpus_path
 
-    def read_file(self, file_name):
+    def read_file(self, file_name):  # Do NOT change signature
         """
         This function is reading a parquet file contains several tweets
         The file location is given as a string as an input to this function.

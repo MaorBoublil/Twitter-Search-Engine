@@ -3,7 +3,7 @@ import os
 import glob
 from utils import save_obj,load_obj
 
-MAX_DOCS = 50000
+MAX_DOCS = 100000
 NUMBER_OF_BUCKETS = 100
 POSTING_PATH = "PostingFiles/"
 TEXT = "_txt"
@@ -12,6 +12,7 @@ class Indexer:
 
     def __init__(self, config):
         self.inverted_idx = {}
+        self.upper_terms = {}
         self.document_dict = {}
         self.postingDict = {}
         self.config = config
@@ -42,6 +43,9 @@ class Indexer:
             if os.path.isfile(file_path):
                 with open(file_path,'r',encoding='utf-8') as file:
                     tmp_dict = eval("{"+file.read()[:-1]+"}")
+                    for upper_term in self.upper_terms[bucket_id]:
+                        print()
+                        #TODO: fix upper terms
                     save_obj(tmp_dict, POSTING_PATH + bucket_id)
 
     #TODO: capital letters
@@ -72,7 +76,13 @@ class Indexer:
             try:
                 # Updating term dictionary
                 if term not in self.inverted_idx.keys():
-                    bucket_id = random.randint(0, NUMBER_OF_BUCKETS)
+                    if term.upper() in self.inverted_idx.keys():
+                        bucket_id = self.inverted_idx[term.upper()][3]
+                        term_list = self.upper_terms.get(bucket_id, [])  #add to fix list
+                        term_list.append(term.upper())
+                        self.upper_terms[bucket_id] = term_list
+                    else:
+                        bucket_id = random.randint(0, NUMBER_OF_BUCKETS)
                     self.inverted_idx[term] = [[tweet_id], 1, tf, str(bucket_id)]
                 else:
                     term_rec = self.inverted_idx[term]

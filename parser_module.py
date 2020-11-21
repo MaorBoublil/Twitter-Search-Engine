@@ -1,6 +1,7 @@
 import re
 from nltk.corpus import stopwords
 from document import Document
+from stemmer import Stemmer
 
 # TODO: stemmer
 # TODO: capital letters
@@ -8,12 +9,15 @@ from document import Document
 
 class Parse:
 
-    def __init__(self):
+    def __init__(self, toStem):
         self.stop_words = stopwords.words('english')
         self.stop_words+= ["rt", "http", "https", "www","twitter.com"]# TODO:remove domain stiop words. we will see after inv-index
-        #self.stop_words = {x:None for x in self.stop_words}
+        self.terms = set()
         self.nonstopwords = 0
         self.max_tf = 0
+        self.toStem = toStem
+        if toStem:
+            self.stemmer = Stemmer()
 
     def parse_sentence(self, text):
         """
@@ -73,7 +77,31 @@ class Parse:
         return list(splitted_hashtag)[1:] + [hashtag.lower()]
 
     def dictAppender(self, d, counter, term):
-        if term.lower() in self.stop_words: return
+        # Handling Stemming
+        if self.toStem:
+            stemmed_word = self.stemmer.stem_term(term)
+            if not term.islower():
+                term = stemmed_word.upper()
+            else:
+                term = stemmed_word
+
+        # Handling upper & lower cases per document
+        term_lower = term.lower()
+        if term_lower in self.stop_words: return #TODO: check if not lower_term
+        term_upper = term.upper()
+
+        if not term.islower(): #upper
+            term = term_upper
+            if term_lower in self.terms:
+                term = term_lower
+        elif term_upper in self.terms: #lower
+            self.terms.remove(term_upper)
+            upper_list = d[term_upper]
+            d.pop(term_upper)
+            d[term_lower] = upper_list
+        self.terms.add(term)
+
+        # Creating indices list
         self.nonstopwords += 1
         tmp_lst = d.get(term, [])
         tmp_lst.append(counter)
@@ -81,7 +109,7 @@ class Parse:
         if self.max_tf < len(tmp_lst):
             self.max_tf = len(tmp_lst)
 
-    def parse_doc(self, doc_as_list):
+    def parse_doc(self, doc_as_list):  # Do NOT change signature
         """doc_as_list[3]
         This function takes a tweet document as list and break it into different fields
         :param doc_as_list: list re-preseting the tweet.

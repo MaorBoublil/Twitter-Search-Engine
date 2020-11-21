@@ -15,7 +15,7 @@ class Stemmer:
 
 
 if __name__ == '__main__':
-    words = ["NBA", "Cities", "CITIES"]
+    words = ["He's", "https", "twitter.com"]
     stemmer = Stemmer()
     for word in words:
         print(stemmer.stem_term(word))
