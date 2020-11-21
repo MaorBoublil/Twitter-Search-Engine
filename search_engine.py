@@ -32,7 +32,7 @@ def run_engine():
     start_time = time.time()
     #number_of_documents = readnParse(r,p,x,number_of_documents)
 
-    for index in range(1):
+    for index in range(20,21):
         # if index == 21:#TODO: WHAT THE HELL 21 Y U STUCk
         #    continue
         documents_list = r.read_file(file_name=x[index])
@@ -51,8 +51,8 @@ def run_engine():
     indexer.finish_index()
 
     print('Finished parsing and indexing. Starting to export files')
-    save_obj(indexer.inverted_idx, "inverted_idx")
-    save_obj(indexer.postingDict, "posting")
+    save_obj(indexer.term_dict, "inverted_idx")
+    save_obj(indexer.document_dict, "doc_dictionary")
 
 
 def load_index():

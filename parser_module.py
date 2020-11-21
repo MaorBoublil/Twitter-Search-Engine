@@ -3,15 +3,13 @@ from nltk.corpus import stopwords
 from document import Document
 from stemmer import Stemmer
 
-# TODO: stemmer
-# TODO: capital letters
 # TODO: entities detector
 
 class Parse:
 
     def __init__(self, toStem):
         self.stop_words = stopwords.words('english')
-        self.stop_words+= ["rt", "http", "https", "www","twitter.com"]# TODO:remove domain stiop words. we will see after inv-index
+        self.stop_words+= ["rt", "http", "https", "www","twitter.com"]# TODO:remove domain stop words. we will see after inv-index
         self.terms = set()
         self.nonstopwords = 0
         self.max_tf = 0
@@ -57,7 +55,7 @@ class Parse:
         num = re.sub(r'([0-9]+).([0]*)([1-9]{0,3})([0]*)(K|M|B)', r'\1.\2\3\5', num)
         return re.sub(r'([0-9]{1,3}).([0]{3})(K|M|B)', r'\1\3', num)
 
-    def url_parser(self, url):
+    def url_parser(self, url): # TODO: split by -
         """
         :param url: recieves a string based dictionary of all urls
         :return: dictionary with parsed urls
@@ -87,7 +85,7 @@ class Parse:
 
         # Handling upper & lower cases per document
         term_lower = term.lower()
-        if term_lower in self.stop_words: return #TODO: check if not lower_term
+        if term_lower in self.stop_words: return
         term_upper = term.upper()
 
         if not term.islower(): #upper
@@ -146,7 +144,7 @@ class Parse:
 
         tokenized_dict, indices_counter = self.parse_sentence(docText)
 
-        urlTermList = self.url_parser(url)  # TODO maybe add another url
+        urlTermList = self.url_parser(url)
         for term in urlTermList:
             indices_counter += 1
             self.dictAppender(tokenized_dict, indices_counter, term)
