@@ -2,19 +2,33 @@ import re
 from nltk.corpus import stopwords
 from document import Document
 from stemmer import Stemmer
+from configuration import ConfigClass
 
+BILLION_PATTERN = r'(?<=\d|.) *Billion|(?<=\d|.) *billion'
+MILLION_PATTERN = r'(?<=\d|.) *Million|(?<=\d|.) *million'
+THOUSAND_PATTERN = r'(?<=\d|.) *Thousand|(?<=\d|.) *thousand'
+BILLION_PATTERN_NUM = r'([0-9]+)(,{0,1})([0-9]{3})(,{0,1})([0-9]{3})(,{0,1})([0-9]{3})'
+MILLION_PATTERN_NUM = r'([0-9]+)(,{0,1})([0-9]{3})(,{0,1})([0-9]{3})'
+THOUSAND_PATTERN_NUM = r'([0-9]+)(,{0,1})([0-9]{3})'
+GENERAL_PATTERN = r'([0-9]+).([0]*)([1-9]{0,3})([0]*)(K|M|B)'
+DECIMAL_PATTERN = r'([0-9]{1,3}).([0]{3})(K|M|B)'
+PERCENT_PATTERN = r'(?<=\d) *percentage|(?<=\d) *percent'
+SPLIT_URL_PATTERN = "://|\?|/|=|(?<=www)."
+REMOVE_URL_PATTERN = r"http\S+"
+TOKENIZER_PATTERN = "[\w']+-[\w]+|@*#*[\w']+"
+HASHTAG_PATTERN = r'_|(?<=[^A-Z])(?=[A-Z])'
 # TODO: entities detector
 
 class Parse:
 
-    def __init__(self, toStem):
+    def __init__(self):
         self.stop_words = stopwords.words('english')
         self.stop_words+= ["rt", "http", "https", "www","twitter.com"]# TODO:remove domain stop words. we will see after inv-index
         self.terms = set()
         self.nonstopwords = 0
         self.max_tf = 0
-        self.toStem = toStem
-        if toStem:
+        self.toStem = ConfigClass().toStem
+        if self.toStem:
             self.stemmer = Stemmer()
 
     def parse_sentence(self, text):
@@ -25,7 +39,7 @@ class Parse:
         """
         term_dict = {}
         # text_tokens = word_tokenize(text) #TODO: is RE Faster? add to doh
-        text_tokens = re.findall("[\w']+-[\w]+|@*#*[\w']+", text)
+        text_tokens = re.findall(TOKENIZER_PATTERN, text)
         indices_counter = 0
         for term in text_tokens:
             indices_counter += 1
@@ -38,22 +52,22 @@ class Parse:
         return term_dict, indices_counter
 
     def split_url(self, url):
-        url_list = list(filter(None, re.split("://|\?|/|=|(?<=www).", url)))
+        url_list = list(filter(None, re.split(SPLIT_URL_PATTERN, url)))
         return url_list
 
     def remove_percent(self, text):
-        return re.sub('(?<=\d) *percentage|(?<=\d) *percent', "%", text)
+        return re.sub(PERCENT_PATTERN, "%", text)
 
-    def num_manipulation(self, num):
+    def num_manipulation(self,num):
         # TODO: Add to DOH 2020(year example), 1000M to 1B?!
-        num = re.sub(r'(?<=\d|.) *Billion|(?<=\d|.) *billion', "B", num)
-        num = re.sub(r'(?<=\d|.) *Million|(?<=\d|.) *million', "M", num)
-        num = re.sub(r'(?<=\d|.) *Thousand|(?<=\d|.) *thousand', "K", num)
-        num = re.sub(r'([0-9]+)(,{0,1})([0-9]{3})(,{0,1})([0-9]{3})(,{0,1})([0-9]{3})', r'\1.\3B', num)
-        num = re.sub(r'([0-9]+)(,{0,1})([0-9]{3})(,{0,1})([0-9]{3}).*([0-9]*)', r'\1.\3M', num)
-        num = re.sub(r'([0-9]+)(,{0,1})([0-9]{3})($|(.[0-9]*)$)', r'\1.\3K', num)
-        num = re.sub(r'([0-9]+).([0]*)([1-9]{0,3})([0]*)(K|M|B)', r'\1.\2\3\5', num)
-        return re.sub(r'([0-9]{1,3}).([0]{3})(K|M|B)', r'\1\3', num)
+        num = re.sub(BILLION_PATTERN, "B", num)
+        num = re.sub(MILLION_PATTERN, "M", num)
+        num = re.sub(THOUSAND_PATTERN, "K", num)
+        num = re.sub(BILLION_PATTERN_NUM, r'\1.\3B', num)
+        num = re.sub(MILLION_PATTERN_NUM, r'\1.\3M', num)
+        num = re.sub(THOUSAND_PATTERN_NUM, r'\1.\3K', num)
+        num = re.sub(GENERAL_PATTERN, r'\1.\2\3\5', num)
+        return re.sub(DECIMAL_PATTERN, r'\1\3', num)
 
     def url_parser(self, url): # TODO: split by -
         """
@@ -71,7 +85,7 @@ class Parse:
 
     def hashtag_parser(self, hashtag):
         splitted_hashtag = map(lambda x: x.lower(),
-                               filter(lambda x: len(x) > 0, re.split(r'_|(?<=[^A-Z])(?=[A-Z])', hashtag)))
+                               filter(lambda x: len(x) > 0, re.split(HASHTAG_PATTERN, hashtag)))
         return list(splitted_hashtag)[1:] + [hashtag.lower()]
 
     def dictAppender(self, d, counter, term):
@@ -114,22 +128,13 @@ class Parse:
         :return: Document object with corresponding fields.
         """
         tweet_id = doc_as_list[0]
-        problem = ["1290519566116773888","1290519944958885889","1290520085958991873","1290520273180008448","1290520284227874816","1290520323914268672","1290520485793599489","1290520554236260354"]
-        if tweet_id in problem:
-            print(1)
         tweet_date = doc_as_list[1]
         full_text = doc_as_list[2]
         url = doc_as_list[3]
-        # indices = doc_as_list[4]
         retweet_text = doc_as_list[5]
         retweet_url = doc_as_list[6]
-        # retweet_indices = doc_as_list[7]
         quote_text = doc_as_list[8]
         quote_url = doc_as_list[9]
-        # quote_indices = doc_as_list[10]
-        # retweet_quote_text = doc_as_list[11]
-        # retweet_quote_url = doc_as_list[12]
-        # retweet_quote_indices = doc_as_list[13]
 
         self.nonstopwords = 0
         self.max_tf =0
@@ -138,7 +143,7 @@ class Parse:
             docText += quote_text
 
         #link removal
-        docText = re.sub(r'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))', '', docText)
+        docText = re.sub(REMOVE_URL_PATTERN, "", docText)
         docText = self.num_manipulation(docText)  # TODO: CHECK IF OK
         docText = self.remove_percent(docText)
 
@@ -154,3 +159,7 @@ class Parse:
         document = Document(tweet_id, tweet_date, full_text, url, retweet_text, retweet_url, quote_text,
                             quote_url, tokenized_dict, doc_length, self.max_tf)
         return document
+
+
+    def parse_query(self,query):
+        return #TODO: FINISH THIS QUERY

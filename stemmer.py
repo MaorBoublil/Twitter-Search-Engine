@@ -1,9 +1,12 @@
-from nltk.stem import snowball
+import time
+
+from nltk import stem
 
 
 class Stemmer:
     def __init__(self):
-        self.stemmer = snowball.SnowballStemmer("english")
+        self.stemmer = stem.SnowballStemmer('english')
+        self.dict = {}
 
     def stem_term(self, token):
         """
@@ -11,11 +14,20 @@ class Stemmer:
         :param token: string of a token
         :return: stemmed token
         """
-        return self.stemmer.stem(token)
+
+        if token in self.dict:
+             return self.dict[token]
+        term = self.stemmer.stem(token)
+        self.dict[token] = term
+        return term
+
 
 
 if __name__ == '__main__':
     words = ["He's", "https", "twitter.com"]
     stemmer = Stemmer()
-    for word in words:
-        print(stemmer.stem_term(word))
+    a = time.time()
+    for i in range(100000):
+        for word in words:
+            stemmer.stem_term(word)
+    print(time.time()-a)
