@@ -194,7 +194,6 @@ class Parse:
         return re.sub(PERCENT_PATTERN, "%", no_dollar)
 
     def num_manipulation(self,num):
-        # TODO: Add to DOH 2020(year example), 1000M to 1B?!
         num = re.sub(BILLION_PATTERN, "B", num)
         num = re.sub(MILLION_PATTERN, "M", num)
         num = re.sub(THOUSAND_PATTERN, "K", num)
@@ -204,7 +203,7 @@ class Parse:
         num = re.sub(GENERAL_PATTERN, r'\1.\2\3\5', num)
         return re.sub(DECIMAL_PATTERN, r'\1\3', num)
 
-    def url_parser(self, url): # TODO: split by -
+    def url_parser(self, url):
         """
         :param url: recieves a string based dictionary of all urls
         :return: dictionary with parsed urls
@@ -214,7 +213,6 @@ class Parse:
 
         finalList = []
         for val in url_dict.values():
-            # TODO: key url is not needed - add to doh
             if 'twitter.com/i/web/status/' in val:
                 continue
             val = re.sub(TWITTER_STATUS_PATTERN,r'\2',val)
@@ -245,6 +243,7 @@ class Parse:
         if term_lower in self.stop_words: return
         term_upper = term.upper()
 
+        # TODO: change code logic - we save only small letters
         if not term.islower():  # upper
             term = term_upper
             if term_lower in self.terms:
@@ -306,7 +305,7 @@ class Parse:
     def parse_query(self,query): # return {term: ([indices,tf])}
         self.nonstopwords = 0
         self.max_tf =0
-        docText = self.num_manipulation(query)  # TODO: CHECK IF OK
+        docText = self.num_manipulation(query)
         docText = self.remove_percent_dollar(docText)
 
         tokenized_dict, indices_counter = self.parse_sentence(docText)
