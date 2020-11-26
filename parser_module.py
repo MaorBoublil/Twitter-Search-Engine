@@ -3,6 +3,7 @@ from nltk.corpus import stopwords
 from document import Document
 from stemmer import Stemmer
 from configuration import ConfigClass
+from utils import save_obj,load_obj
 
 BILLION_PATTERN = r'(?<=\d|.) *Billion|(?<=\d|.) *billion'
 MILLION_PATTERN = r'(?<=\d|.) *Million|(?<=\d|.) *million'
@@ -13,11 +14,16 @@ THOUSAND_PATTERN_NUM = r'([0-9]+)(,{0,1})([0-9]{3})'
 GENERAL_PATTERN = r'([0-9]+).([0]*)([1-9]{0,3})([0]*)(K|M|B)'
 DECIMAL_PATTERN = r'([0-9]{1,3}).([0]{3})(K|M|B)'
 PERCENT_PATTERN = r'(?<=\d) *percentage|(?<=\d) *percent'
-SPLIT_URL_PATTERN = "://|\?|/|=|(?<=www)."
+SPLIT_URL_PATTERN = "://|\?|/|=|-|(?<=www)."
 REMOVE_URL_PATTERN = r"http\S+"
 TOKENIZER_PATTERN = "[\w']+-[\w]+|@*#*[\w']+"
 HASHTAG_PATTERN = r'_|(?<=[^A-Z])(?=[A-Z])'
 # TODO: entities detector
+# TODO: add removement of ' (chukus)
+# TODO: CHECK IF NEEDED TO REMOVE the at - at hashtags example THE DOLLAR
+# TODO: SAVE @ with and without
+# TODO: ADD TO PERCENT DOLLAR ASWELL
+# TODO: 35 3/4 term
 
 class Parse:
 
@@ -80,7 +86,9 @@ class Parse:
         finalList = []
         for val in url_dict.values():
             # TODO: key url is not needed - add to doh
-            finalList += self.split_url(val)
+            if 'twitter.com/i/web/status/' in val:
+                continue
+            finalList = self.split_url(val)
         return finalList
 
     def hashtag_parser(self, hashtag):
@@ -99,14 +107,15 @@ class Parse:
 
         # Handling upper & lower cases per document
         term_lower = term.lower()
+        if not all(ord(c) < 128 for c in term): return
         if term_lower in self.stop_words: return
         term_upper = term.upper()
 
-        if not term.islower(): #upper
+        if not term.islower():  # upper
             term = term_upper
             if term_lower in self.terms:
                 term = term_lower
-        elif term_upper in self.terms: #lower
+        elif term_upper in self.terms:  # lower
             self.terms.remove(term_upper)
             upper_list = d[term_upper]
             d.pop(term_upper)
@@ -161,5 +170,11 @@ class Parse:
         return document
 
 
-    def parse_query(self,query):
-        return #TODO: FINISH THIS QUERY
+    def parse_query(self,query): # return {term: ([indices,tf])}
+        self.nonstopwords = 0
+        self.max_tf =0
+        docText = self.num_manipulation(query)  # TODO: CHECK IF OK
+        docText = self.remove_percent(docText)
+
+        tokenized_dict, indices_counter = self.parse_sentence(docText)
+        return tokenized_dict
