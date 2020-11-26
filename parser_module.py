@@ -13,16 +13,18 @@ MILLION_PATTERN_NUM = r'([0-9]+)(,{0,1})([0-9]{3})(,{0,1})([0-9]{3})'
 THOUSAND_PATTERN_NUM = r'([0-9]+)(,{0,1})([0-9]{3})'
 GENERAL_PATTERN = r'([0-9]+).([0]*)([1-9]{0,3})([0]*)(K|M|B)'
 DECIMAL_PATTERN = r'([0-9]{1,3}).([0]{3})(K|M|B)'
-PERCENT_PATTERN = r'(?<=\d) *percentage|(?<=\d) *percent'
+PERCENT_PATTERN = r'(?<=\d) *((p|P)(e|E)(r|R)(c|C)(e|E)(n|N)(t|T)|(p|P)(e|E)(r|R)(c|C)(e|E)(n|N)(t|T)(a|A)(g|G)(e|E)|%)'
+DOLLAR_PATTERN = r'(?<=\d) *((d|D)(o|O)(l|L)(l|L)(a|A)(r|R)(s|S)*|$)'
 SPLIT_URL_PATTERN = "://|\?|/|=|-|(?<=www)."
 REMOVE_URL_PATTERN = r"http\S+"
-TOKENIZER_PATTERN = "[\w']+-[\w]+|@*#*[\w']+"
 HASHTAG_PATTERN = r'_|(?<=[^A-Z])(?=[A-Z])'
+TWITTER_STATUS_PATTERN = r'(twitter.com\/)(\S*)(\/status\/)(\d)*'
+TOKENIZER_PATTERN = r'''(?x)\d+\ +\d+\/\d+|\d+\/\d+|\d+\.*\d*(?:[MKB])*(?:[$%])|(?:[A-Z]\.)+| \w+(?:-\w+)*| \$?\d+(?:\.\d+)?%?'''
+
+
 # TODO: entities detector
 # TODO: add removement of ' (chukus)
 # TODO: CHECK IF NEEDED TO REMOVE the at - at hashtags example THE DOLLAR
-# TODO: SAVE @ with and without
-# TODO: ADD TO PERCENT DOLLAR ASWELL
 # TODO: 35 3/4 term
 
 class Parse:
@@ -44,7 +46,6 @@ class Parse:
         :return:
         """
         term_dict = {}
-        # text_tokens = word_tokenize(text) #TODO: is RE Faster? add to doh
         text_tokens = re.findall(TOKENIZER_PATTERN, text)
         indices_counter = 0
         for term in text_tokens:
@@ -53,6 +54,9 @@ class Parse:
                 hashtag_list = self.hashtag_parser(term)
                 for mini_term in hashtag_list:
                     self.dictAppender(term_dict, indices_counter, mini_term)
+            elif term[0] == "@":
+                no_tag = self.tags_parser(term)
+                self.dictAppender(term_dict, indices_counter, no_tag)
             self.dictAppender(term_dict, indices_counter, term)
 
         return term_dict, indices_counter
@@ -61,8 +65,9 @@ class Parse:
         url_list = list(filter(None, re.split(SPLIT_URL_PATTERN, url)))
         return url_list
 
-    def remove_percent(self, text):
-        return re.sub(PERCENT_PATTERN, "%", text)
+    def remove_percent_dollar(self, text):
+        no_dollar = re.sub(DOLLAR_PATTERN,"$", text)
+        return re.sub(PERCENT_PATTERN, "%", no_dollar)
 
     def num_manipulation(self,num):
         # TODO: Add to DOH 2020(year example), 1000M to 1B?!
@@ -88,6 +93,8 @@ class Parse:
             # TODO: key url is not needed - add to doh
             if 'twitter.com/i/web/status/' in val:
                 continue
+            val = re.sub(TWITTER_STATUS_PATTERN,r'\2',val)
+            print(val)
             finalList = self.split_url(val)
         return finalList
 
@@ -95,6 +102,9 @@ class Parse:
         splitted_hashtag = map(lambda x: x.lower(),
                                filter(lambda x: len(x) > 0, re.split(HASHTAG_PATTERN, hashtag)))
         return list(splitted_hashtag)[1:] + [hashtag.lower()]
+
+    def tags_parser(self, tag):
+        return tag[1:]
 
     def dictAppender(self, d, counter, term):
         # Handling Stemming
@@ -151,10 +161,9 @@ class Parse:
         if quote_text:
             docText += quote_text
 
-        #link removal
-        docText = re.sub(REMOVE_URL_PATTERN, "", docText)
-        docText = self.num_manipulation(docText)  # TODO: CHECK IF OK
-        docText = self.remove_percent(docText)
+        docText = re.sub(REMOVE_URL_PATTERN, "", docText)  # link removal
+        docText = self.remove_percent_dollar(docText)
+        docText = self.num_manipulation(docText)
 
         tokenized_dict, indices_counter = self.parse_sentence(docText)
 
@@ -174,7 +183,7 @@ class Parse:
         self.nonstopwords = 0
         self.max_tf =0
         docText = self.num_manipulation(query)  # TODO: CHECK IF OK
-        docText = self.remove_percent(docText)
+        docText = self.remove_percent_dollar(docText)
 
         tokenized_dict, indices_counter = self.parse_sentence(docText)
         return tokenized_dict

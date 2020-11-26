@@ -10,10 +10,10 @@ from multiprocessing.pool import Pool
 from multiprocessing import cpu_count,Manager
 from tqdm import tqdm
 import os
-import spacy
+#import spacy
 
 CPUCOUNT = cpu_count()
-bigsmall = load_obj("BigSmallWords")
+#bigsmall = load_obj("BigSmallWords")
 
 def run_engine():
     """
@@ -90,19 +90,19 @@ def search_and_rank_query(query, docs, k):
 
 def func(parsed_doc):
     new_dict = {}
-    for term in parsed_doc.term_doc_dictionary:
-        if term.upper() in bigsmall:
-            term_name = term.upper()
-            new_dict[term_name] = parsed_doc.term_doc_dictionary[term]
-        else:
-            term_name = term.lower()
-            new_dict[term_name] = parsed_doc.term_doc_dictionary[term]
-    parsed_doc.term_doc_dictionary = new_dict
+    # for term in parsed_doc.term_doc_dictionary:
+    #     if term.upper() in bigsmall:
+    #         term_name = term.upper()
+    #         new_dict[term_name] = parsed_doc.term_doc_dictionary[term]
+    #     else:
+    #         term_name = term.lower()
+    #         new_dict[term_name] = parsed_doc.term_doc_dictionary[term]
+    # parsed_doc.term_doc_dictionary = new_dict
     return parsed_doc
 
 
 def main():
-    #run_engine()
+    run_engine()
     docs = load_index()
     query = ""
     while query is not "DONE":
