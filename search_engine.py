@@ -13,7 +13,6 @@ import os
 #import spacy
 
 CPUCOUNT = cpu_count()
-#bigsmall = load_obj("BigSmallWords")
 
 def run_engine():
     """
@@ -36,7 +35,7 @@ def run_engine():
     x = [x.split("Engine/")[1] for x in list(glob.iglob(os.getcwd()+"/Data/" + '**/**.parquet', recursive=True))]
     start_time = time.time()
 
-    for index in range(len(x)):
+    for index in range(2,3):
         documents_list = r.read_file(file_name=x[index])
 
         # texts = [x[2] for x in documents_list]
@@ -44,25 +43,25 @@ def run_engine():
         # tweetidgen = (n[0] for n in documents_list)
         # for item,tweetid in tqdm(zip(docs,tweetidgen),total=len(documents_list),desc="Entity Recognition #" + str(index)):
         #     nerDict[tweetid] = item.ents
-        parsed_doc_list = []
+        #parsed_doc_list = []
         with Pool(CPUCOUNT) as _p:
             for parsed_doc in tqdm(_p.imap_unordered(p.parse_doc, documents_list), total=len(documents_list),
-                                   desc="Parsing Parquet #" + str(index)):
+                                   desc="Parsing & Indexing Parquet #" + str(index)):
                 number_of_documents += 1
-                parsed_doc_list.append(parsed_doc)
+                indexer.add_new_doc(parsed_doc)
             _p.close()
             _p.join()
 
-        bigsmallwordsDocs = []
-        for parsed_doc in parsed_doc_list:
-            bigsmallwordsDocs.append(func(parsed_doc))
-
-        with Pool(CPUCOUNT) as _p:
-            for doc_index in tqdm(range(len(bigsmallwordsDocs)), total=len(bigsmallwordsDocs),
-                                   desc="Indexing Parquet #" + str(index)):
-                indexer.add_new_doc(bigsmallwordsDocs[doc_index])
-            _p.close()
-            _p.join()
+        # bigsmallwordsDocs = []
+        # for parsed_doc in parsed_doc_list:
+        #     bigsmallwordsDocs.append(func(parsed_doc))
+        #
+        # with Pool(CPUCOUNT) as _p:
+        #     for doc_index in tqdm(range(len(bigsmallwordsDocs)), total=len(bigsmallwordsDocs),
+        #                            desc="Indexing Parquet #" + str(index)):
+        #         indexer.add_new_doc(bigsmallwordsDocs[doc_index])
+        #     _p.close()
+        #     _p.join()
 
 
     print("--- Parallel Parser + indexer took %s seconds ---" % (time.time() - start_time))
@@ -82,27 +81,14 @@ def load_index():
 
 def search_and_rank_query(query, docs, k):
     p = Parse()
-    parsed_query = p.parse_query(query)
+    parsed_query, parsed_entities = p.parse_query(query)
     searcher = Searcher(docs)
     relevant_docs = searcher.relevant_docs_from_posting(parsed_query)
     ranked_docs = searcher.ranker.rank_relevant_docs(relevant_docs)
     return searcher.ranker.retrieve_top_k(ranked_docs, k)
 
-def func(parsed_doc):
-    new_dict = {}
-    # for term in parsed_doc.term_doc_dictionary:
-    #     if term.upper() in bigsmall:
-    #         term_name = term.upper()
-    #         new_dict[term_name] = parsed_doc.term_doc_dictionary[term]
-    #     else:
-    #         term_name = term.lower()
-    #         new_dict[term_name] = parsed_doc.term_doc_dictionary[term]
-    # parsed_doc.term_doc_dictionary = new_dict
-    return parsed_doc
-
-
 def main():
-    run_engine()
+    #run_engine()
     docs = load_index()
     query = ""
     while query is not "DONE":

@@ -3,7 +3,6 @@ from nltk.corpus import stopwords
 from document import Document
 from stemmer import Stemmer
 from configuration import ConfigClass
-from utils import save_obj,load_obj
 
 BILLION_PATTERN = r'(?<=\d|.) *Billion|(?<=\d|.) *billion'
 MILLION_PATTERN = r'(?<=\d|.) *Million|(?<=\d|.) *million'
@@ -20,6 +19,7 @@ REMOVE_URL_PATTERN = r"http\S+"
 HASHTAG_PATTERN = r'_|(?<=[^A-Z])(?=[A-Z])'
 TWITTER_STATUS_PATTERN = r'(twitter.com\/)(\S*)(\/status\/)(\d)*'
 TOKENIZER_PATTERN = r'''(?x)\d+\ +\d+\/\d+|\d+\/\d+|\d+\.*\d*(?:[MKB])*(?:[$%])*|(?:[A-Z]\.)+| (?:[#@])*\w+(?:\'\w+)*| \$?\d+(?:\.\d+)?%?'''
+ENTITY_PATTERN = r'(?:[A-Z][A-Za-z]*(?:(?: |-)[A-Z][A-Za-z]*)+)'
 
 contractions = {
 "ain't": "is not",
@@ -152,8 +152,21 @@ class Parse:
         self.nonstopwords = 0
         self.max_tf = 0
         self.toStem = ConfigClass().toStem
+        self.entities = {}
         if self.toStem:
             self.stemmer = Stemmer()
+
+    # def func(self,parsed_doc):
+    #     new_dict = {}
+    #     for term in parsed_doc.term_doc_dictionary:
+    #         if term.upper() in bigsmall:
+    #             term_name = term.upper()
+    #             new_dict[term_name] = parsed_doc.term_doc_dictionary[term]
+    #         else:
+    #             term_name = term.lower()
+    #             new_dict[term_name] = parsed_doc.term_doc_dictionary[term]
+    #     parsed_doc.term_doc_dictionary = new_dict
+    #     return parsed_doc
 
     def parse_sentence(self, text):
         """
@@ -162,6 +175,11 @@ class Parse:
         :return:
         """
         term_dict = {}
+        entity_dict = {}
+
+        for entity in re.findall(ENTITY_PATTERN, text):
+            cleaned_entity = re.sub("-", " ", entity).upper()
+            entity_dict[cleaned_entity] = entity_dict.get(cleaned_entity,0) + 1
 
         text_tokens = re.findall(TOKENIZER_PATTERN, text)
         indices_counter = 0
@@ -183,7 +201,7 @@ class Parse:
                 continue
             self.dictAppender(term_dict, indices_counter, term)
 
-        return term_dict, indices_counter
+        return term_dict, indices_counter, entity_dict
 
     def split_url(self, url):
         url_list = list(filter(None, re.split(SPLIT_URL_PATTERN, url)))
@@ -216,7 +234,6 @@ class Parse:
             if 'twitter.com/i/web/status/' in val:
                 continue
             val = re.sub(TWITTER_STATUS_PATTERN,r'\2',val)
-            print(val)
             finalList = self.split_url(val)
         return finalList
 
@@ -270,14 +287,9 @@ class Parse:
         :return: Document object with corresponding fields.
         """
         tweet_id = doc_as_list[0]
-        tweet_date = doc_as_list[1]
         full_text = doc_as_list[2]
         url = doc_as_list[3]
-        retweet_text = doc_as_list[5]
-        retweet_url = doc_as_list[6]
         quote_text = doc_as_list[8]
-        quote_url = doc_as_list[9]
-
         self.nonstopwords = 0
         self.max_tf =0
         docText = full_text
@@ -288,7 +300,7 @@ class Parse:
         docText = self.remove_percent_dollar(docText)
         docText = self.num_manipulation(docText)
 
-        tokenized_dict, indices_counter = self.parse_sentence(docText)
+        tokenized_dict, indices_counter, entity_dict = self.parse_sentence(docText)
 
         urlTermList = self.url_parser(url)
         for term in urlTermList:
@@ -297,8 +309,7 @@ class Parse:
 
         doc_length = self.nonstopwords  # after text operations.
 
-        document = Document(tweet_id, tweet_date, full_text, url, retweet_text, retweet_url, quote_text,
-                            quote_url, tokenized_dict, doc_length, self.max_tf)
+        document = Document(tweet_id,term_doc_dictionary=tokenized_dict, doc_length=doc_length, max_tf=self.max_tf,entities_dict=entity_dict)
         return document
 
 
@@ -308,5 +319,5 @@ class Parse:
         docText = self.num_manipulation(query)
         docText = self.remove_percent_dollar(docText)
 
-        tokenized_dict, indices_counter = self.parse_sentence(docText)
-        return tokenized_dict
+        tokenized_dict, indices_counter, entity_dict = self.parse_sentence(docText)
+        return tokenized_dict, entity_dict
