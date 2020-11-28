@@ -1,4 +1,6 @@
 import glob
+
+from WordNet import WordNet
 from reader import ReadFile
 from configuration import ConfigClass
 from parser_module import Parse
@@ -7,10 +9,9 @@ from searcher import Searcher
 from utils import save_obj,load_obj
 import time
 from multiprocessing.pool import Pool
-from multiprocessing import cpu_count,Manager
+from multiprocessing import cpu_count
 from tqdm import tqdm
 import os
-#import spacy
 
 CPUCOUNT = cpu_count()
 
@@ -22,12 +23,6 @@ def run_engine():
     print("Project was created successfully.")
     number_of_documents = 0
 
-    #nlp = spacy.load('en_core_web_sm',
-    #                 disable=['parser', 'tagger', 'textcat', 'entity_linker', 'entity_ruler', 'sentencizer'])
-    #nerDict = {}
-    #bigsmall = load_obj("BigSmallWords")
-
-
     config = ConfigClass()
     r = ReadFile(corpus_path=config.get__corpusPath())
     p = Parse()
@@ -35,7 +30,7 @@ def run_engine():
     x = [x.split("Engine/")[1] for x in list(glob.iglob(os.getcwd()+"/Data/" + '**/**.parquet', recursive=True))]
     start_time = time.time()
 
-    for index in range(2,3):
+    for index in range(10,11):
         documents_list = r.read_file(file_name=x[index])
 
         # texts = [x[2] for x in documents_list]
@@ -51,17 +46,6 @@ def run_engine():
                 indexer.add_new_doc(parsed_doc)
             _p.close()
             _p.join()
-
-        # bigsmallwordsDocs = []
-        # for parsed_doc in parsed_doc_list:
-        #     bigsmallwordsDocs.append(func(parsed_doc))
-        #
-        # with Pool(CPUCOUNT) as _p:
-        #     for doc_index in tqdm(range(len(bigsmallwordsDocs)), total=len(bigsmallwordsDocs),
-        #                            desc="Indexing Parquet #" + str(index)):
-        #         indexer.add_new_doc(bigsmallwordsDocs[doc_index])
-        #     _p.close()
-        #     _p.join()
 
 
     print("--- Parallel Parser + indexer took %s seconds ---" % (time.time() - start_time))
@@ -81,9 +65,11 @@ def load_index():
 
 def search_and_rank_query(query, docs, k):
     p = Parse()
+    wordnet = WordNet()
+    query = wordnet.expand_query(p.remove_stopwords(query))
     parsed_query, parsed_entities = p.parse_query(query)
     searcher = Searcher(docs)
-    relevant_docs = searcher.relevant_docs_from_posting(parsed_query)
+    relevant_docs = searcher.relevant_docs_from_posting(parsed_query, parsed_entities)
     ranked_docs = searcher.ranker.rank_relevant_docs(relevant_docs)
     return searcher.ranker.retrieve_top_k(ranked_docs, k)
 

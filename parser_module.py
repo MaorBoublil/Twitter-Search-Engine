@@ -321,3 +321,9 @@ class Parse:
 
         tokenized_dict, indices_counter, entity_dict = self.parse_sentence(docText)
         return tokenized_dict, entity_dict
+
+    def remove_stopwords(self,query):
+        text_tokens = re.findall(TOKENIZER_PATTERN, query)
+        tokens = list(filter(lambda x: x.lower() not in self.stop_words, text_tokens))
+        query = ' '.join(tokens)
+        return query
