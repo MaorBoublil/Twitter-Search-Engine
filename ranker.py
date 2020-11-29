@@ -5,7 +5,6 @@ class Ranker:
     def __init__(self, searcher):
         self.searcher = searcher
 
-
     def rank_relevant_docs(self,relevant_docs):
         """
         This function provides rank for each relevant document and sorts them by their scores.

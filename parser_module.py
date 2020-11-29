@@ -145,13 +145,13 @@ contractions = {
 
 class Parse:
 
-    def __init__(self):
+    def __init__(self,stemming):
         self.stop_words = stopwords.words('english')
         self.stop_words+= ["rt", "http", "https", "www","twitter.com"] # TODO: check &amp
         self.terms = set()
         self.nonstopwords = 0
         self.max_tf = 0
-        self.toStem = ConfigClass().toStem
+        self.toStem = stemming
         self.entities = {}
         if self.toStem:
             self.stemmer = Stemmer()

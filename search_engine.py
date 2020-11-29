@@ -1,5 +1,4 @@
 import glob
-
 from WordNet import WordNet
 from reader import ReadFile
 from configuration import ConfigClass
@@ -7,38 +6,27 @@ from parser_module import Parse
 from indexer import Indexer
 from searcher import Searcher
 from utils import save_obj,load_obj
-import time
 from multiprocessing.pool import Pool
 from multiprocessing import cpu_count
 from tqdm import tqdm
-import os
 
 CPUCOUNT = cpu_count()
 
-def run_engine():
+def run_engine(corpus_path='',output_path='',stemming=False):
     """
 
     :return:
     """
-    print("Project was created successfully.")
     number_of_documents = 0
 
     config = ConfigClass()
-    r = ReadFile(corpus_path=config.get__corpusPath())
-    p = Parse()
-    indexer = Indexer(config)
-    x = [x.split("Engine/")[1] for x in list(glob.iglob(os.getcwd()+"/Data/" + '**/**.parquet', recursive=True))]
-    start_time = time.time()
+    r = ReadFile(corpus_path=corpus_path)
+    p = Parse(stemming)
+    indexer = Indexer(config,output_path)
+    parquets = [x for x in list(glob.iglob(corpus_path + '/**/*.parquet', recursive=True))]
 
-    for index in range(len(x)):
-        documents_list = r.read_file(file_name=x[index])
-
-        # texts = [x[2] for x in documents_list]
-        # docs = nlp.pipe(texts,n_process=CPUCOUNT)
-        # tweetidgen = (n[0] for n in documents_list)
-        # for item,tweetid in tqdm(zip(docs,tweetidgen),total=len(documents_list),desc="Entity Recognition #" + str(index)):
-        #     nerDict[tweetid] = item.ents
-        #parsed_doc_list = []
+    for index in range(len(parquets)):
+        documents_list = r.read_file(file_name=parquets[index])
         with Pool(CPUCOUNT) as _p:
             for parsed_doc in tqdm(_p.imap_unordered(p.parse_doc, documents_list), total=len(documents_list),
                                    desc="Parsing & Indexing Parquet #" + str(index)):
@@ -47,38 +35,39 @@ def run_engine():
             _p.close()
             _p.join()
 
-
-    print("--- Parallel Parser + indexer took %s seconds ---" % (time.time() - start_time))
-    start_time = time.time()
+    p.entities.clear()
     indexer.finish_index()
-    print("--- Finish indexer took %s seconds ---" % (time.time() - start_time))
     print('Finished parsing and indexing. Starting to export files')
-    save_obj(indexer.term_dict, "inverted_idx")
-    save_obj(indexer.document_dict, "doc_dictionary")
+    save_obj(indexer.term_dict, output_path + "/inverted_idx")
+    save_obj(indexer.document_dict, output_path + "/doc_dictionary")
+    indexer.document_dict.clear()
+    indexer.term_dict.clear()
 
 
-def load_index():
+def load_index(output_path=''):
     print('Load inverted index')
-    docs = (load_obj("inverted_idx"),load_obj("doc_dictionary"))
+    docs = (load_obj(output_path + "/inverted_idx"),load_obj(output_path + "/doc_dictionary"))
     return docs
 
 
-def search_and_rank_query(query, docs, k):
-    p = Parse()
+def search_and_rank_query(query, docs, k, stemming, output_path):
+    p = Parse(stemming)
     wordnet = WordNet()
     query = wordnet.expand_query(p.remove_stopwords(query))
     parsed_query, parsed_entities = p.parse_query(query)
-    searcher = Searcher(docs)
+    searcher = Searcher(docs, output_path)
     relevant_docs = searcher.relevant_docs_from_posting(parsed_query, parsed_entities)
     ranked_docs = searcher.ranker.rank_relevant_docs(relevant_docs)
     return searcher.ranker.retrieve_top_k(ranked_docs, k)
 
-def main():
-    #run_engine()
-    docs = load_index()
-    query = ""
-    while query is not "DONE":
-        query = input("Please enter a query: ")
-        k = int(input("Please enter number of docs to retrieve: "))
-        for doc_tuple in search_and_rank_query(query, docs, k):
+def main(corpus_path='', output_path='', stemming=False, queries=None, num_docs_to_retrieve=10):
+    run_engine(corpus_path,output_path,stemming)
+    docs = load_index(output_path)
+    if type(queries) != list:
+        file1 = open(queries, 'r')
+        queries = file1.readlines()
+    for query in queries:
+        query = query.replace('\n', '')
+        print(query)
+        for doc_tuple in search_and_rank_query(query, docs, num_docs_to_retrieve, stemming, output_path):
             print('tweet id: {}, score (unique common words with query): {}'.format(doc_tuple[0], doc_tuple[1]))

@@ -1,20 +1,16 @@
 from parser_module import Parse
 from ranker import Ranker
 from utils import load_obj
-import numpy as np
-
-POSTING_PATH = "PostingFiles/" #TODO: configuration this
-
 
 class Searcher:
 
-    def __init__(self, docs):
+    def __init__(self, docs, path):
         """
         :param inverted_index: dictionary of inverted index
         """
-        self.parser = Parse()
         self.ranker = Ranker(self)
         self.term_dict,self.document_dict = docs
+        self.POSTING_PATH = path
 
     def get_doc_length(self, tweet_id):
         return self.document_dict[tweet_id][3]
@@ -26,7 +22,6 @@ class Searcher:
         :return: dictionary of relevant documents.
         """
         query_terms = {term:len(parsed_query[term]) for term in parsed_query}  # query terms is {term:tf}
-        # TODO: WORDNET HERE!
 
         # preparing query terms as appear in dictionary
         terms = query_terms.keys()
@@ -44,7 +39,7 @@ class Searcher:
         # adding entities to query terms
         for entity in parsed_entities:
             if entity in self.term_dict:
-                query_terms[entity] = parsed_entities[entity]*[-1]
+                query_terms[entity] = parsed_entities[entity]
 
         doc_set = set()
         buckets = {}  # {BUCKET_ID : [TERMS AS TUPLES (TERM,[TWEETS])]}
@@ -61,7 +56,7 @@ class Searcher:
         return_postings = {}
 
         for bucket_id in buckets:
-            posting_file = load_obj(POSTING_PATH + bucket_id)
+            posting_file = load_obj(self.POSTING_PATH + '/' + bucket_id)
             for term, all_tweets in buckets[bucket_id]:
                 for tweet_id in all_tweets:
                     return_postings[(term, tweet_id)] = posting_file[(term, tweet_id)]

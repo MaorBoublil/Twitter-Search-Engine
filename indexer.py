@@ -1,20 +1,16 @@
 import random
 import os
 import glob
-import time
 
 from utils import save_obj, load_obj
 from cmath import log10
 
 MAX_DOCS = 100000
 NUMBER_OF_BUCKETS = 500
-POSTING_PATH = "PostingFiles/"
-TEXT = "_txt"
-
 
 class Indexer:
 
-    def __init__(self, config):
+    def __init__(self, config,path):
         self.term_dict = {}
         self.document_dict = {}
         self.upper_terms = {}
@@ -23,10 +19,7 @@ class Indexer:
         self.buckets = {}
         self.doc_counter = 0
         self.suspected_entities = {} # ENTITY: (TWEETID,tf)
-        #Remove PKL FILES
-        files = glob.glob(POSTING_PATH + '*')
-        for f in files:
-            os.remove(f)
+        self.POSTING_PATH = path
 
     def add_new_doc(self, document):
         """
@@ -121,26 +114,19 @@ class Indexer:
                 to_delete[bucket_id] = to_delete.get(bucket_id,[]) + [(term,tweet_id)]
 
         N = len(self.document_dict)
-        mergetimes = [] #TODO: REMOVE PRINTS
-        calculationtimes = []
-        bigsmalltime = []
-        save_times = []
         for bucket_id in self.buckets:
             bucket_id = str(bucket_id)
-            file_path = POSTING_PATH + bucket_id
+            file_path = self.POSTING_PATH + '/' + bucket_id
             posting_file = {}
             posting_file.update(self.buckets[bucket_id])
-            start_merge = time.time()
             for dump_num in range(self.current_dump):
                 posting_file.update(load_obj(file_path + "_" + str(dump_num)))
                 os.remove(file_path + "_" + str(dump_num) + ".pkl")
-            mergetimes.append(time.time() - start_merge)
 
             for term,tweet_id in to_delete[bucket_id]:
                 self.term_dict.pop(term)
                 posting_file.pop((term,tweet_id))
 
-            bigsmall_start = time.time()
             # Fix upper terms in fix list in relevant bucket
             for upper_term in self.upper_terms.get(bucket_id,[]):
                 # Updating term dictionary for lower term
@@ -156,10 +142,8 @@ class Indexer:
                     posting_file.pop((upper_term, tweet))
                 # Remove from term dictionary
                 self.term_dict.pop(upper_term)
-            bigsmalltime.append(time.time() - bigsmall_start)
 
             # Calculate document |d| for ranking
-            start_calc = time.time()
             for key in posting_file:
                 term, tweet_id = key
                 idf = self.term_dict[term][4]
@@ -170,20 +154,11 @@ class Indexer:
                 w_ij = tf_ij * idf
                 posting_file[key][2] = w_ij
                 self.document_dict[tweet_id][3] += w_ij ** 2
-            calculationtimes.append(time.time()-start_calc)
-            save_calc = time.time()
             save_obj(posting_file, file_path)
-            save_times.append(time.time() - save_calc)
-        print(f"save time is: {sum(save_times)}")
-        print(f"Calc time is: {sum(calculationtimes)}")
-        print(f"merge time is: {sum(mergetimes)}")
-        print(f"bigsmall time is: {sum(bigsmalltime)}")
-
-        # TODO: remove words with low frequency
 
     def clean_memory(self):
         # clear all buckets
         for bucket_id, bucket_dict in self.buckets.items():
-            save_obj(bucket_dict, POSTING_PATH + bucket_id + "_" + str(self.current_dump))
+            save_obj(bucket_dict, self.POSTING_PATH + '/' + bucket_id + "_" + str(self.current_dump))
             self.buckets[bucket_id] = {}
         self.current_dump += 1
