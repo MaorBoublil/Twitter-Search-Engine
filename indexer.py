@@ -44,8 +44,16 @@ class Indexer:
             if entity in self.term_dict:
                 terms_in_document[entity] = document.entities[entity]
             elif entity in self.suspected_entities:
-                bucket_id = random.randint(0, NUMBER_OF_BUCKETS)
-                self.term_dict[entity] = [[self.suspected_entities[entity][0]], 1, self.suspected_entities[entity][1], str(bucket_id), None]
+                # Add entity as term
+                bucket_id = str(random.randint(0, NUMBER_OF_BUCKETS))
+                prev_tweet_id = self.suspected_entities[entity][0]
+                prev_tf = self.suspected_entities[entity][1]
+                prev_max_tf = self.document_dict[prev_tweet_id][1]
+                self.term_dict[entity] = [[prev_tweet_id], 1, prev_tf, str(bucket_id), None]
+                if bucket_id not in self.buckets:
+                    self.buckets[bucket_id] = {}
+                self.buckets[bucket_id].update({(entity, prev_tweet_id): [None, prev_tf / prev_max_tf, 0]})
+                # Add to document term list to process, and remove from suspected
                 terms_in_document[entity] = document.entities[entity]
                 self.suspected_entities.pop(entity)
             else: # new entity
@@ -66,9 +74,9 @@ class Indexer:
                     # We want to make sure lower term and upper term are in the same bucket
                     if term.upper() in self.term_dict:  # we have lower and upper is inside
                         bucket_id = self.term_dict[term.upper()][3]
-                        term_list = self.upper_terms.get(bucket_id, [])  # add to fix list
-                        term_list.append(term.upper())
-                        self.upper_terms[bucket_id] = term_list
+                        term_set = self.upper_terms.get(bucket_id, set())  # add to fix list
+                        term_set.add(term.upper())
+                        self.upper_terms[bucket_id] = term_set
                         self.term_dict[term] = [[tweet_id], 1, tf, str(bucket_id), None]
                     elif term.lower() in self.term_dict:  # we have upper and lower is inside
                         term = term.lower()
@@ -78,7 +86,7 @@ class Indexer:
                         term_rec[2] += tf  # cf
                         self.term_dict[term] = term_rec
                     else: # new word
-                        bucket_id = random.randint(0, NUMBER_OF_BUCKETS)
+                        bucket_id = str(random.randint(0, NUMBER_OF_BUCKETS))
                         self.term_dict[term] = [[tweet_id], 1, tf, str(bucket_id), None]
 
                 else:  # existing term - update term parameters
@@ -104,7 +112,14 @@ class Indexer:
             self.clean_memory()
 
     def finish_index(self):  # TODO: PARRALEL
-        #self.clean_memory()  # TODO: if hierarchical then clean before
+        to_delete = {} # {BUCKETID : [terms]}
+        delete_list = filter(lambda term : self.term_dict[term][2] <= 1,self.term_dict)
+        for term in delete_list:
+            bucket_id = self.term_dict[term][3]
+            if term.upper() not in self.upper_terms[bucket_id]:
+                tweet_id = self.term_dict[term][0][0]
+                to_delete[bucket_id] = to_delete.get(bucket_id,[]) + [(term,tweet_id)]
+
         N = len(self.document_dict)
         mergetimes = [] #TODO: REMOVE PRINTS
         calculationtimes = []
@@ -118,8 +133,12 @@ class Indexer:
             start_merge = time.time()
             for dump_num in range(self.current_dump):
                 posting_file.update(load_obj(file_path + "_" + str(dump_num)))
+                os.remove(file_path + "_" + str(dump_num) + ".pkl")
             mergetimes.append(time.time() - start_merge)
-            #os.remove(file_path + "_" + str(dump_num) + ".pkl") TODO: REMOVE LATER do remove after all dumps and not specific num_*.pkl
+
+            for term,tweet_id in to_delete[bucket_id]:
+                self.term_dict.pop(term)
+                posting_file.pop((term,tweet_id))
 
             bigsmall_start = time.time()
             # Fix upper terms in fix list in relevant bucket

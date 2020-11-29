@@ -30,7 +30,7 @@ def run_engine():
     x = [x.split("Engine/")[1] for x in list(glob.iglob(os.getcwd()+"/Data/" + '**/**.parquet', recursive=True))]
     start_time = time.time()
 
-    for index in range(10,11):
+    for index in range(len(x)):
         documents_list = r.read_file(file_name=x[index])
 
         # texts = [x[2] for x in documents_list]

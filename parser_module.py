@@ -141,13 +141,13 @@ contractions = {
 "you've": "you have"
 }
 
-# TODO: entities detector
+# TODO: if we want in helek gimel - HOK 3 - U.S.A to USA
 
 class Parse:
 
     def __init__(self):
         self.stop_words = stopwords.words('english')
-        self.stop_words+= ["rt", "http", "https", "www","twitter.com"]# TODO:remove domain stop words. we will see after inv-index
+        self.stop_words+= ["rt", "http", "https", "www","twitter.com"] # TODO: check &amp
         self.terms = set()
         self.nonstopwords = 0
         self.max_tf = 0
@@ -155,18 +155,6 @@ class Parse:
         self.entities = {}
         if self.toStem:
             self.stemmer = Stemmer()
-
-    # def func(self,parsed_doc):
-    #     new_dict = {}
-    #     for term in parsed_doc.term_doc_dictionary:
-    #         if term.upper() in bigsmall:
-    #             term_name = term.upper()
-    #             new_dict[term_name] = parsed_doc.term_doc_dictionary[term]
-    #         else:
-    #             term_name = term.lower()
-    #             new_dict[term_name] = parsed_doc.term_doc_dictionary[term]
-    #     parsed_doc.term_doc_dictionary = new_dict
-    #     return parsed_doc
 
     def parse_sentence(self, text):
         """
@@ -260,7 +248,6 @@ class Parse:
         if term_lower in self.stop_words: return
         term_upper = term.upper()
 
-        # TODO: change code logic - we save only small letters
         if not term.islower():  # upper
             term = term_upper
             if term_lower in self.terms:
@@ -312,8 +299,7 @@ class Parse:
         document = Document(tweet_id,term_doc_dictionary=tokenized_dict, doc_length=doc_length, max_tf=self.max_tf,entities_dict=entity_dict)
         return document
 
-
-    def parse_query(self,query): # return {term: ([indices,tf])}
+    def parse_query(self,query):  # return {term: ([indices,tf])}
         self.nonstopwords = 0
         self.max_tf =0
         docText = self.num_manipulation(query)
