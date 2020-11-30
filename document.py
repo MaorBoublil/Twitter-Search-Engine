@@ -1,6 +1,6 @@
 class Document:
 
-    def __init__(self, tweet_id, full_text=None,term_doc_dictionary=None, doc_length =0, max_tf =1, entities_dict=None):
+    def __init__(self, tweet_id, full_text=None,term_doc_dictionary=None, doc_length=0, max_tf=1, entities_dict=None):
         """
         :param tweet_id: tweet id
         :param tweet_date: tweet date

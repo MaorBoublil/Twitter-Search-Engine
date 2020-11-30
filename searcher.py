@@ -1,6 +1,7 @@
 from parser_module import Parse
 from ranker import Ranker
 from utils import load_obj
+import os
 
 class Searcher:
 
@@ -24,7 +25,7 @@ class Searcher:
         query_terms = {term:len(parsed_query[term]) for term in parsed_query}  # query terms is {term:tf}
 
         # preparing query terms as appear in dictionary
-        terms = query_terms.keys()
+        terms = list(query_terms)
         for term in terms:
             if term not in self.term_dict:
                 if term.isupper() and term.lower() in self.term_dict:
@@ -54,7 +55,6 @@ class Searcher:
         # Create doc and terms to return
         return_term_dict = {}
         return_postings = {}
-
         for bucket_id in buckets:
             posting_file = load_obj(self.POSTING_PATH + '/' + bucket_id)
             for term, all_tweets in buckets[bucket_id]:

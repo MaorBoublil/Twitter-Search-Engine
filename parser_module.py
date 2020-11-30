@@ -2,7 +2,6 @@ import re
 from nltk.corpus import stopwords
 from document import Document
 from stemmer import Stemmer
-from configuration import ConfigClass
 
 BILLION_PATTERN = r'(?<=\d|.) *Billion|(?<=\d|.) *billion'
 MILLION_PATTERN = r'(?<=\d|.) *Million|(?<=\d|.) *million'
@@ -18,7 +17,7 @@ SPLIT_URL_PATTERN = "://|\?|/|=|-|(?<=www)."
 REMOVE_URL_PATTERN = r"http\S+"
 HASHTAG_PATTERN = r'_|(?<=[^A-Z])(?=[A-Z])'
 TWITTER_STATUS_PATTERN = r'(twitter.com\/)(\S*)(\/status\/)(\d)*'
-TOKENIZER_PATTERN = r'''(?x)\d+\ +\d+\/\d+|\d+\/\d+|\d+\.*\d*(?:[MKB])*(?:[$%])*|(?:[A-Z]\.)+| (?:[#@])*\w+(?:\'\w+)*| \$?\d+(?:\.\d+)?%?'''
+TOKENIZER_PATTERN = r"(?x)\d+\ +\d+\/\d+|\d+\/\d+|\d+\.*\d*(?:[MKBG])*(?:[$%])*|(?:[A-Z]\.)+| (?:[#@])*\w+\’*\'*\w*| \$?\d+(?:\.\d+)?%?"
 ENTITY_PATTERN = r'(?:[A-Z][A-Za-z]*(?:(?: |-)[A-Z][A-Za-z]*)+)'
 
 contractions = {
@@ -138,7 +137,124 @@ contractions = {
 "you'll": "you will",
 "you'll've": "you will have",
 "you're": "you are",
-"you've": "you have"
+"you've": "you have",
+"ain’t": "is not",
+"aren’t": "are not",
+"can’t": "cannot",
+"can’t’ve": "cannot have",
+"’cause": "because",
+"could’ve": "could have",
+"couldn’t": "could not",
+"couldn’t’ve": "could not have",
+"didn’t": "did not",
+"doesn’t": "does not",
+"don’t": "do not",
+"hadn’t": "had not",
+"hadn’t’ve": "had not have",
+"hasn’t": "has not",
+"haven’t": "have not",
+"he’d": "he had",
+"he’d’ve": "he would have",
+"he’ll": "he will",
+"he’ll’ve": "he will have",
+"he’s": "he is",
+"how’d": "how did",
+"how’d’y": "how do you",
+"how’ll": "how will",
+"how’s": "how is",
+"I’d": "I would",
+"I’d’ve": "I would have",
+"I’ll": "I will",
+"I’ll’ve": "I will have",
+"I’m": "I am",
+"I’ve": "I have",
+"isn’t": "is not",
+"it’d": "it had",
+"it’d’ve": "it would have",
+"it’ll": "it will",
+"it’ll’ve": "it will have",
+"it’s": "it is",
+"let’s": "let us",
+"ma’am": "madam",
+"mayn’t": "may not",
+"might’ve": "might have",
+"mightn’t": "might not",
+"mightn’t’ve": "might not have",
+"must’ve": "must have",
+"mustn’t": "must not",
+"mustn’t’ve": "must not have",
+"needn’t": "need not",
+"needn’t’ve": "need not have",
+"o’clock": "of the clock",
+"oughtn’t": "ought not",
+"oughtn’t’ve": "ought not have",
+"shan’t": "shall not",
+"sha’n’t": "shall not",
+"shan’t’ve": "shall not have",
+"she’d": "she had",
+"she’d’ve": "she would have",
+"she’ll": "she will",
+"she’ll’ve": "she will have",
+"she’s": "she is",
+"should’ve": "should have",
+"shouldn’t": "should not",
+"shouldn’t’ve": "should not have",
+"so’ve": "so have",
+"so’s": "so is",
+"that’d": "that would",
+"that’d’ve": "that would have",
+"that’s": "that is",
+"there’d": "there would",
+"there’d’ve": "there would have",
+"there’s": "there is",
+"they’d": "they would",
+"they’d’ve": "they would have",
+"they’ll": "they will",
+"they’ll’ve": "they will have",
+"they’re": "they are",
+"they’ve": "they have",
+"to’ve": "to have",
+"wasn’t": "was not",
+"we’d": "we would",
+"we’d’ve": "we would have",
+"we’ll": "we will",
+"we’ll’ve": "we will have",
+"we’re": "we are",
+"we’ve": "we have",
+"weren’t": "were not",
+"what’ll": "what will",
+"what’ll’ve": "what will have",
+"what’re": "what are",
+"what’s": "what is",
+"what’ve": "what have",
+"when’s": "when is",
+"when’ve": "when have",
+"where’d": "where did",
+"where’s": "where is",
+"where’ve": "where have",
+"who’ll": "who will",
+"who’ll’ve": "who will have",
+"who’s": "who is",
+"who’ve": "who have",
+"why’s": "why is",
+"why’ve": "why have",
+"will’ve": "will have",
+"won’t": "will not",
+"won’t’ve": "will not have",
+"would’ve": "would have",
+"wouldn’t": "would not",
+"wouldn’t’ve": "would not have",
+"y’all": "you all",
+"y’all’d": "you all would",
+"y’all’d’ve": "you all would have",
+"y’all’re": "you all are",
+"y’all’ve": "you all have",
+"you’d": "you would",
+"you’d’ve": "you would have",
+"you’ll": "you will",
+"you’ll’ve": "you will have",
+"you’re": "you are",
+"you’ve": "you have"
 }
 
 # TODO: if we want in helek gimel - HOK 3 - U.S.A to USA
@@ -172,6 +288,7 @@ class Parse:
         text_tokens = re.findall(TOKENIZER_PATTERN, text)
         indices_counter = 0
         for term in text_tokens:
+            if len(term) < 1: continue
             indices_counter += 1
             if term[0] == "#":  # handle hashtags
                 hashtag_list = self.hashtag_parser(term)
@@ -214,21 +331,25 @@ class Parse:
         :param url: recieves a string based dictionary of all urls
         :return: dictionary with parsed urls
         """
-        try: url_dict = eval(url)  # convert string to dictionary
-        except: url_dict = eval(re.sub(r'null', '""', url))
+        if len(url) <= 2:
+            return []
+        url_list = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', url[1:-1])
 
         finalList = []
-        for val in url_dict.values():
-            if 'twitter.com/i/web/status/' in val:
+        for val in url_list:
+            if 'twitter.com/i/web/status/' in val or 't.co' in val:
                 continue
             val = re.sub(TWITTER_STATUS_PATTERN,r'\2',val)
             finalList = self.split_url(val)
         return finalList
 
     def hashtag_parser(self, hashtag):
-        splitted_hashtag = map(lambda x: x.lower(),
-                               filter(lambda x: len(x) > 0, re.split(HASHTAG_PATTERN, hashtag)))
-        return list(splitted_hashtag)[1:] + [hashtag.lower()]
+        splitted_hashtag = list(map(lambda x: x.lower(),
+                               filter(lambda x: len(x) > 0, re.split(HASHTAG_PATTERN, hashtag))))
+        if len(splitted_hashtag) < 2:
+            return splitted_hashtag
+        else:
+            return splitted_hashtag[1:] + [hashtag.lower()]
 
     def tags_parser(self, tag):
         return tag[1:]
@@ -275,28 +396,30 @@ class Parse:
         """
         tweet_id = doc_as_list[0]
         full_text = doc_as_list[2]
-        url = doc_as_list[3]
-        quote_text = doc_as_list[8]
-        self.nonstopwords = 0
-        self.max_tf =0
         docText = full_text
-        if quote_text:
-            docText += quote_text
+        url = doc_as_list[3]
+        if len(doc_as_list) >= 14:
+            quote_text = doc_as_list[8]
+            if quote_text:
+                docText += quote_text
+        self.nonstopwords = 0
+        self.max_tf = 0
 
+        self.terms.clear()  # TODO: REMOVE THIS FOR PARALLEL
         docText = re.sub(REMOVE_URL_PATTERN, "", docText)  # link removal
         docText = self.remove_percent_dollar(docText)
         docText = self.num_manipulation(docText)
 
         tokenized_dict, indices_counter, entity_dict = self.parse_sentence(docText)
-
         urlTermList = self.url_parser(url)
         for term in urlTermList:
+            #if not term or len(term) < 1 : continue
             indices_counter += 1
             self.dictAppender(tokenized_dict, indices_counter, term)
 
         doc_length = self.nonstopwords  # after text operations.
 
-        document = Document(tweet_id,term_doc_dictionary=tokenized_dict, doc_length=doc_length, max_tf=self.max_tf,entities_dict=entity_dict)
+        document = Document(tweet_id,term_doc_dictionary=tokenized_dict, doc_length=doc_length, max_tf=self.max_tf, entities_dict=entity_dict)
         return document
 
     def parse_query(self,query):  # return {term: ([indices,tf])}

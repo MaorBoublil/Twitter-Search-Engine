@@ -1,7 +1,5 @@
 import random
 import os
-import glob
-
 from utils import save_obj, load_obj
 from cmath import log10
 
@@ -109,7 +107,7 @@ class Indexer:
         delete_list = filter(lambda term : self.term_dict[term][2] <= 1,self.term_dict)
         for term in delete_list:
             bucket_id = self.term_dict[term][3]
-            if term.upper() not in self.upper_terms[bucket_id]:
+            if bucket_id not in self.upper_terms or term.upper() not in self.upper_terms[bucket_id]:
                 tweet_id = self.term_dict[term][0][0]
                 to_delete[bucket_id] = to_delete.get(bucket_id,[]) + [(term,tweet_id)]
 
@@ -123,9 +121,10 @@ class Indexer:
                 posting_file.update(load_obj(file_path + "_" + str(dump_num)))
                 os.remove(file_path + "_" + str(dump_num) + ".pkl")
 
-            for term,tweet_id in to_delete[bucket_id]:
-                self.term_dict.pop(term)
-                posting_file.pop((term,tweet_id))
+            if bucket_id in to_delete:
+                for term,tweet_id in to_delete[bucket_id]:
+                    self.term_dict.pop(term)
+                    posting_file.pop((term,tweet_id))
 
             # Fix upper terms in fix list in relevant bucket
             for upper_term in self.upper_terms.get(bucket_id,[]):

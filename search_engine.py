@@ -1,4 +1,4 @@
-import glob
+import os
 from WordNet import WordNet
 from reader import ReadFile
 from configuration import ConfigClass
@@ -12,20 +12,26 @@ from tqdm import tqdm
 
 CPUCOUNT = cpu_count()
 
-def run_engine(corpus_path='',output_path='',stemming=False):
+def run_engine(corpus_path='', output_path='', stemming=False):
     """
 
     :return:
     """
     number_of_documents = 0
-
+    try:
+        os.mkdir(output_path)
+    except:
+        pass
     config = ConfigClass()
     r = ReadFile(corpus_path=corpus_path)
     p = Parse(stemming)
     indexer = Indexer(config,output_path)
-    parquets = [x for x in list(glob.iglob(corpus_path + '/**/*.parquet', recursive=True))]
-
-    for index in range(len(parquets)):
+    parquets = []
+    for root, dirs, files in os.walk(corpus_path):
+        for name in files:
+            if name.endswith((".parquet", ".htm")):
+                parquets.append(root + '/' + name)
+    for index in range(1):
         documents_list = r.read_file(file_name=parquets[index])
         with Pool(CPUCOUNT) as _p:
             for parsed_doc in tqdm(_p.imap_unordered(p.parse_doc, documents_list), total=len(documents_list),
