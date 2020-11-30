@@ -280,7 +280,7 @@ class Parse:
         """
         term_dict = {}
         entity_dict = {}
-
+        # Entity recognition by capital letters (2 words or more)
         for entity in re.findall(ENTITY_PATTERN, text):
             cleaned_entity = re.sub("-", " ", entity).upper()
             entity_dict[cleaned_entity] = entity_dict.get(cleaned_entity,0) + 1
@@ -331,7 +331,7 @@ class Parse:
         :param url: recieves a string based dictionary of all urls
         :return: dictionary with parsed urls
         """
-        if len(url) <= 2:
+        if len(url) <= 2: #url list is not empty
             return []
         url_list = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', url[1:-1])
 
@@ -394,6 +394,7 @@ class Parse:
         :param doc_as_list: list re-preseting the tweet.
         :return: Document object with corresponding fields.
         """
+        # Get relevant information from tweet
         tweet_id = doc_as_list[0]
         full_text = doc_as_list[2]
         docText = full_text
@@ -402,21 +403,22 @@ class Parse:
             quote_text = doc_as_list[8]
             if quote_text:
                 docText += quote_text
+
         self.nonstopwords = 0
         self.max_tf = 0
 
-        if tweet_id == '1288846358129127425':
+        if tweet_id == '1288846358129127425': #TODO: remove this!!!
             print('here')
 
         self.terms.clear()  # TODO: REMOVE THIS FOR PARALLEL
-        docText = re.sub(REMOVE_URL_PATTERN, "", docText)  # link removal from fulltext
+        docText = re.sub(REMOVE_URL_PATTERN, "", docText)  # link (urls) removal from fulltext
         docText = self.num_manipulation(docText)
         docText = self.remove_percent_dollar(docText)
 
         tokenized_dict, indices_counter, entity_dict = self.parse_sentence(docText)
         urlTermList = self.url_parser(url)
         for term in urlTermList:
-            #if not term or len(term) < 1 : continue
+            #if not term or len(term) < 1 : continue TODO: why this is here??
             indices_counter += 1
             self.dictAppender(tokenized_dict, indices_counter, term)
 

@@ -23,6 +23,7 @@ class Ranker:
         query_vector = np.zeros((query_len, 1))
         query_weight = 0
 
+        # Inset values to matrix and calculating query_weight (scalar) and query_vector
         for term in query_terms:
             docs = term_dict[term][0]
             j = term_map[term]
@@ -34,12 +35,13 @@ class Ranker:
                 i = doc_map[tweet_id]
                 matrix[i, j] = w_ij
 
+        # Math calculation for
+        document_vector = np.dot(matrix, query_vector)  # MONE
+        size_vector = np.zeros((number_of_docs, 1))  # MECHANE
         query_weight = query_weight ** 0.5
-        document_vector = np.dot(matrix, query_vector)
-        doc_size_vector = np.zeros((number_of_docs, 1))
         for tweet_id, indx in doc_map.items():
-            doc_size_vector[indx, 0] = (self.searcher.get_doc_length(tweet_id) ** 0.5) * query_weight
-        ranking = np.transpose(np.divide(document_vector, doc_size_vector)).tolist()[0]
+            size_vector[indx, 0] = (self.searcher.get_doc_length(tweet_id) ** 0.5) * query_weight
+        ranking = np.transpose(np.divide(document_vector, size_vector)).tolist()[0]
 
         ranked_tweets = [(x,y) for x,y in zip (doc_map,ranking)]
 

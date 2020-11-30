@@ -24,7 +24,7 @@ class Searcher:
         """
         query_terms = {term:len(parsed_query[term]) for term in parsed_query}  # query terms is {term:tf}
 
-        # preparing query terms as appear in dictionary
+        # Preparing query terms as appear in dictionary
         terms = list(query_terms)
         for term in terms:
             if term not in self.term_dict:
@@ -37,13 +37,14 @@ class Searcher:
                 else:
                     query_terms.pop(term)
 
-        # adding entities to query terms
+        # Adding entities to query terms
         for entity in parsed_entities:
             if entity in self.term_dict:
                 query_terms[entity] = parsed_entities[entity]
 
+        # Creating docs set and preparing bucked_id list
         doc_set = set()
-        buckets = {}  # {BUCKET_ID : [TERMS AS TUPLES (TERM,[TWEETS])]}
+        buckets = {}  # {bucket_id : [tuple list (TERM,[TWEETS])]}
         for term in query_terms:
             # Add to bucket search list
             bucket_id = self.term_dict[term][3]
@@ -52,7 +53,7 @@ class Searcher:
             buckets[bucket_id] = tmp_list
             doc_set.update(self.term_dict[term][0])
 
-        # Create doc and terms to return
+        # Create doc and terms to return (relevant to the query)
         return_term_dict = {}
         return_postings = {}
         for bucket_id in buckets:

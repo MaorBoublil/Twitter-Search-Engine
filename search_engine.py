@@ -17,22 +17,27 @@ def run_engine(corpus_path='', output_path='', stemming=False):
 
     :return:
     """
-    number_of_documents = 0
+    # Create PostingFile directory if it doesn't exist
     try:
         os.mkdir(output_path)
     except:
         pass
+
+    number_of_documents = 0
     config = ConfigClass()
     r = ReadFile(corpus_path=corpus_path)
     p = Parse(stemming)
     indexer = Indexer(config,output_path)
+    # Get all parquet files from corpus path
     parquets = []
     for root, dirs, files in os.walk(corpus_path):
         for name in files:
             if name.endswith((".parquet", ".htm")):
                 parquets.append(root + '/' + name)
+
     for index in range(len(parquets)):
         documents_list = r.read_file(file_name=parquets[index])
+        # Create a new process for each document
         with Pool(CPUCOUNT) as _p:
             for parsed_doc in tqdm(_p.imap_unordered(p.parse_doc, documents_list), total=len(documents_list),
                                    desc="Parsing & Indexing Parquet #" + str(index)):

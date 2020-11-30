@@ -31,6 +31,7 @@ class Indexer:
         terms_in_document = document.term_doc_dictionary
         tweet_id = document.tweet_id
 
+        # Handle entities - verify only entities appear in 2+ tweets will be in our corpus
         for entity in document.entities:
             if entity in self.term_dict:
                 terms_in_document[entity] = document.entities[entity]
@@ -50,12 +51,12 @@ class Indexer:
             else: # new entity
                 self.suspected_entities[entity] = (tweet_id, document.entities[entity])
 
-        # Go over each term in the doc
+        # Go over each term in the doc - add to posting file and update term dictionary
         for term in terms_in_document.keys():
             term_record = terms_in_document[term]
-            if type(term_record) == int:
+            if type(term_record) == int: #entity
                 tf = term_record
-            else:
+            else: #regular term
                 tf = len(terms_in_document[term])
 
             old_term = term
@@ -63,20 +64,20 @@ class Indexer:
                 # Updating term dictionary
                 if term not in self.term_dict:
                     # We want to make sure lower term and upper term are in the same bucket
-                    if term.upper() in self.term_dict:  # we have lower and upper is inside
+                    if term.upper() in self.term_dict:  # we have lower and upper is inside - this is a new term
                         bucket_id = self.term_dict[term.upper()][3]
                         term_set = self.upper_terms.get(bucket_id, set())  # add to fix list
                         term_set.add(term.upper())
                         self.upper_terms[bucket_id] = term_set
                         self.term_dict[term] = [[tweet_id], 1, tf, str(bucket_id), None]
-                    elif term.lower() in self.term_dict:  # we have upper and lower is inside
+                    elif term.lower() in self.term_dict:  # we have upper and lower is inside - add to existing lower
                         term = term.lower()
                         term_rec = self.term_dict[term]
                         term_rec[0].append(tweet_id)
                         term_rec[1] += 1  # df
                         term_rec[2] += tf  # cf
                         self.term_dict[term] = term_rec
-                    else: # new word
+                    else: # new word - new term
                         bucket_id = str(random.randint(0, NUMBER_OF_BUCKETS))
                         self.term_dict[term] = [[tweet_id], 1, tf, str(bucket_id), None]
 
@@ -92,19 +93,21 @@ class Indexer:
                 bucket_id = self.term_dict[term][3]
                 if bucket_id not in self.buckets:
                     self.buckets[bucket_id] = {}
-
+                # Add to posting file bucket
                 self.buckets[bucket_id].update({(term, tweet_id): [terms_in_document[old_term], tf / document.max_tf, 0]})
 
             except:
                 print('problem with the following key {}'.format(term))
 
-        if self.doc_counter == MAX_DOCS:
+        if self.doc_counter == MAX_DOCS: #DUMP
             self.doc_counter = 0
             self.clean_memory()
 
-    def finish_index(self):  # TODO: PARRALEL
-        to_delete = {} # {BUCKETID : [terms]}
+    def finish_index(self):
+        # TODO: PARRALEL this method
+        # Collect cf=1 terms, will be removed from our corpus
         delete_list = filter(lambda term : self.term_dict[term][2] <= 1,self.term_dict)
+        to_delete = {} # {BUCKETID : [terms]}
         for term in delete_list:
             bucket_id = self.term_dict[term][3]
             if bucket_id in self.upper_terms and term.upper() not in self.upper_terms[bucket_id]:
@@ -112,15 +115,19 @@ class Indexer:
                 to_delete[bucket_id] = to_delete.get(bucket_id,[]) + [(term,tweet_id)]
 
         N = len(self.document_dict)
+        # Go over all buckets (posting files)
         for bucket_id in self.buckets:
             bucket_id = str(bucket_id)
             file_path = self.POSTING_PATH + '/' + bucket_id
+
+            # Merge all dumps to one posting file for the bucket
             posting_file = {}
             posting_file.update(self.buckets[bucket_id])
             for dump_num in range(self.current_dump):
                 posting_file.update(load_obj(file_path + "_" + str(dump_num)))
                 os.remove(file_path + "_" + str(dump_num) + ".pkl")
 
+            # Clean all cf=1 terms from posting files and term dict
             if bucket_id in to_delete:
                 for term,tweet_id in to_delete[bucket_id]:
                     self.term_dict.pop(term)
@@ -142,7 +149,7 @@ class Indexer:
                 # Remove from term dictionary
                 self.term_dict.pop(upper_term)
 
-            # Calculate document |d| for ranking
+            # Calculate document |d| by wij in each posting for ranking
             for key in posting_file:
                 term, tweet_id = key
                 idf = self.term_dict[term][4]
@@ -153,10 +160,11 @@ class Indexer:
                 w_ij = tf_ij * idf
                 posting_file[key][2] = w_ij
                 self.document_dict[tweet_id][3] += w_ij ** 2
+
             save_obj(posting_file, file_path)
 
     def clean_memory(self):
-        # clear all buckets
+        # Save posting file as pickle and clear all buckets in RAM
         for bucket_id, bucket_dict in self.buckets.items():
             save_obj(bucket_dict, self.POSTING_PATH + '/' + bucket_id + "_" + str(self.current_dump))
             self.buckets[bucket_id] = {}
