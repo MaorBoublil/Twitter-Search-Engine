@@ -31,7 +31,7 @@ def run_engine(corpus_path='', output_path='', stemming=False):
         for name in files:
             if name.endswith((".parquet", ".htm")):
                 parquets.append(root + '/' + name)
-    for index in range(1):
+    for index in range(len(parquets)):
         documents_list = r.read_file(file_name=parquets[index])
         with Pool(CPUCOUNT) as _p:
             for parsed_doc in tqdm(_p.imap_unordered(p.parse_doc, documents_list), total=len(documents_list),

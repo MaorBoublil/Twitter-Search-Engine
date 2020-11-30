@@ -107,7 +107,7 @@ class Indexer:
         delete_list = filter(lambda term : self.term_dict[term][2] <= 1,self.term_dict)
         for term in delete_list:
             bucket_id = self.term_dict[term][3]
-            if bucket_id not in self.upper_terms or term.upper() not in self.upper_terms[bucket_id]:
+            if bucket_id in self.upper_terms and term.upper() not in self.upper_terms[bucket_id]:
                 tweet_id = self.term_dict[term][0][0]
                 to_delete[bucket_id] = to_delete.get(bucket_id,[]) + [(term,tweet_id)]
 

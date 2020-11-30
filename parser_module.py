@@ -11,8 +11,8 @@ MILLION_PATTERN_NUM = r'([0-9]+)(,{0,1})([0-9]{3})(,{0,1})([0-9]{3})'
 THOUSAND_PATTERN_NUM = r'([0-9]+)(,{0,1})([0-9]{3})'
 GENERAL_PATTERN = r'([0-9]+).([0]*)([1-9]{0,3})([0]*)(K|M|B)'
 DECIMAL_PATTERN = r'([0-9]{1,3}).([0]{3})(K|M|B)'
-PERCENT_PATTERN = r'(?<=\d) *((p|P)(e|E)(r|R)(c|C)(e|E)(n|N)(t|T)|(p|P)(e|E)(r|R)(c|C)(e|E)(n|N)(t|T)(a|A)(g|G)(e|E)|%)'
-DOLLAR_PATTERN = r'(?<=\d) *((d|D)(o|O)(l|L)(l|L)(a|A)(r|R)(s|S)*|$)'
+PERCENT_PATTERN = r'(?<=\d)(?<=M|B|K)* *((p|P)(e|E)(r|R)(c|C)(e|E)(n|N)(t|T)|(p|P)(e|E)(r|R)(c|C)(e|E)(n|N)(t|T)(a|A)(g|G)(e|E)|%)'
+DOLLAR_PATTERN = r'(?<=\d[M|B|K]) *((d|D)(o|O)(l|L)(l|L)(a|A)(r|R)(s|S)*|$)|(?<=\d) *((d|D)(o|O)(l|L)(l|L)(a|A)(r|R)(s|S)*|$)'
 SPLIT_URL_PATTERN = "://|\?|/|=|-|(?<=www)."
 REMOVE_URL_PATTERN = r"http\S+"
 HASHTAG_PATTERN = r'_|(?<=[^A-Z])(?=[A-Z])'
@@ -405,10 +405,13 @@ class Parse:
         self.nonstopwords = 0
         self.max_tf = 0
 
+        if tweet_id == '1288846358129127425':
+            print('here')
+
         self.terms.clear()  # TODO: REMOVE THIS FOR PARALLEL
-        docText = re.sub(REMOVE_URL_PATTERN, "", docText)  # link removal
-        docText = self.remove_percent_dollar(docText)
+        docText = re.sub(REMOVE_URL_PATTERN, "", docText)  # link removal from fulltext
         docText = self.num_manipulation(docText)
+        docText = self.remove_percent_dollar(docText)
 
         tokenized_dict, indices_counter, entity_dict = self.parse_sentence(docText)
         urlTermList = self.url_parser(url)
