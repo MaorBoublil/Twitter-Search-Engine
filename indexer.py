@@ -110,7 +110,7 @@ class Indexer:
         to_delete = {} # {BUCKETID : [terms]}
         for term in delete_list:
             bucket_id = self.term_dict[term][3]
-            if bucket_id in self.upper_terms and term.upper() not in self.upper_terms[bucket_id]:
+            if term.upper() not in self.upper_terms.get(bucket_id, set()):
                 tweet_id = self.term_dict[term][0][0]
                 to_delete[bucket_id] = to_delete.get(bucket_id,[]) + [(term,tweet_id)]
 
@@ -144,6 +144,9 @@ class Indexer:
                 self.term_dict[lower_term] = lower_record
                 # Updating posting files to lower term
                 for tweet in self.term_dict[upper_term][0]:
+                    if (upper_term, tweet) not in posting_file:
+                        print(str(upper_term) + "-" + str(tweet))
+                        continue
                     posting_file[(lower_term, tweet)] = posting_file[(upper_term, tweet)]
                     posting_file.pop((upper_term, tweet))
                 # Remove from term dictionary

@@ -399,18 +399,13 @@ class Parse:
         full_text = doc_as_list[2]
         docText = full_text
         url = doc_as_list[3]
-        if len(doc_as_list) >= 14:
-            quote_text = doc_as_list[8]
-            if quote_text:
-                docText += quote_text
+        quote_text = doc_as_list[8]
+        if quote_text:
+            docText += quote_text
 
         self.nonstopwords = 0
         self.max_tf = 0
 
-        if tweet_id == '1288846358129127425': #TODO: remove this!!!
-            print('here')
-
-        self.terms.clear()  # TODO: REMOVE THIS FOR PARALLEL
         docText = re.sub(REMOVE_URL_PATTERN, "", docText)  # link (urls) removal from fulltext
         docText = self.num_manipulation(docText)
         docText = self.remove_percent_dollar(docText)
@@ -418,7 +413,6 @@ class Parse:
         tokenized_dict, indices_counter, entity_dict = self.parse_sentence(docText)
         urlTermList = self.url_parser(url)
         for term in urlTermList:
-            #if not term or len(term) < 1 : continue TODO: why this is here??
             indices_counter += 1
             self.dictAppender(tokenized_dict, indices_counter, term)
 

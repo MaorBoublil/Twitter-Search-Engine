@@ -4,7 +4,7 @@ class ConfigClass:
         self.savedFileMainFolder = ''
         self.saveFilesWithStem = self.savedFileMainFolder + "/WithStem"
         self.saveFilesWithoutStem = self.savedFileMainFolder + "/WithoutStem"
-        self.toStem = False
+        self.toStem = True
 
     def get__corpusPath(self):
         return self.corpusPath

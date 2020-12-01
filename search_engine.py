@@ -1,4 +1,6 @@
 import os
+import time
+
 from WordNet import WordNet
 from reader import ReadFile
 from configuration import ConfigClass
@@ -22,7 +24,7 @@ def run_engine(corpus_path='', output_path='', stemming=False):
         os.mkdir(output_path)
     except:
         pass
-
+    start = time.time()
     number_of_documents = 0
     config = ConfigClass()
     r = ReadFile(corpus_path=corpus_path)
@@ -48,7 +50,7 @@ def run_engine(corpus_path='', output_path='', stemming=False):
 
     p.entities.clear()
     indexer.finish_index()
-    print('Finished parsing and indexing. Starting to export files')
+    print('Finished parsing and indexing and finished to export files' + str(time.time()-start))
     save_obj(indexer.term_dict, output_path + "/inverted_idx")
     save_obj(indexer.document_dict, output_path + "/doc_dictionary")
     indexer.document_dict.clear()
