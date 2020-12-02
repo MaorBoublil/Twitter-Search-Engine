@@ -1,5 +1,7 @@
 import pickle
 
+from configuration import ConfigClass
+
 
 def save_obj(obj, name):
     """
@@ -19,4 +21,9 @@ def load_obj(name):
     :return: loaded pickle file
     """
     with open(name + '.pkl', 'rb') as f:
+        return pickle.load(f)
+
+def load_inverted_index():
+    path = ConfigClass.get_path()
+    with open(path + '/' + 'inverted_idx.pkl', 'rb') as f:
         return pickle.load(f)

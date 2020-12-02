@@ -1,10 +1,10 @@
 class ConfigClass:
-    def __init__(self):
-        self.corpusPath = ''
-        self.savedFileMainFolder = ''
-        self.saveFilesWithStem = self.savedFileMainFolder + "/WithStem"
-        self.saveFilesWithoutStem = self.savedFileMainFolder + "/WithoutStem"
-        self.toStem = True
+    output_path=''
 
-    def get__corpusPath(self):
-        return self.corpusPath
+    @staticmethod
+    def set_path(path):
+        ConfigClass.output_path = path
+
+    @staticmethod
+    def get_path():
+        return ConfigClass.output_path

@@ -144,9 +144,7 @@ class Indexer:
                 self.term_dict[lower_term] = lower_record
                 # Updating posting files to lower term
                 for tweet in self.term_dict[upper_term][0]:
-                    if (upper_term, tweet) not in posting_file:
-                        print(str(upper_term) + "-" + str(tweet))
-                        continue
+                    if (upper_term, tweet) not in posting_file: continue
                     posting_file[(lower_term, tweet)] = posting_file[(upper_term, tweet)]
                     posting_file.pop((upper_term, tweet))
                 # Remove from term dictionary
